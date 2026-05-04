@@ -4,7 +4,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from mneme.schema import CapabilityCard, Reflection, Workflow
+from mneme.schema import CATEGORIES, CapabilityCard, Reflection, Workflow
 
 
 def test_capability_card_minimal() -> None:
@@ -49,7 +49,7 @@ def test_capability_card_rejects_unknown_category() -> None:
         CapabilityCard(
             id="x",
             name="x",
-            category="not_a_real_category",
+            category="not_a_real_category",  # type: ignore[arg-type]
             action_verb="x",
             triggers=["x"],
             description="x",
@@ -59,6 +59,46 @@ def test_capability_card_rejects_unknown_category() -> None:
             schema_version="1",
             source="mcp",
         )
+
+
+def test_capability_card_rejects_negative_counters() -> None:
+    with pytest.raises(ValidationError):
+        CapabilityCard(
+            id="x",
+            name="x",
+            category="filesystem",
+            action_verb="x",
+            triggers=["x"],
+            description="x",
+            params_required=[],
+            params_optional=[],
+            example="x",
+            schema_version="1",
+            source="mcp",
+            success_count=-1,
+        )
+
+
+def test_capability_card_rejects_decay_score_out_of_range() -> None:
+    with pytest.raises(ValidationError):
+        CapabilityCard(
+            id="x",
+            name="x",
+            category="filesystem",
+            action_verb="x",
+            triggers=["x"],
+            description="x",
+            params_required=[],
+            params_optional=[],
+            example="x",
+            schema_version="1",
+            source="mcp",
+            decay_score=1.5,
+        )
+
+
+def test_categories_set_size() -> None:
+    assert len(CATEGORIES) == 35
 
 
 def test_workflow_minimal() -> None:
@@ -71,6 +111,20 @@ def test_workflow_minimal() -> None:
     assert wf.outcome == "success"
 
 
+def test_workflow_rejects_empty_sequence() -> None:
+    with pytest.raises(ValidationError):
+        Workflow(situation="x", sequence=[], outcome="success")
+
+
+def test_workflow_rejects_invalid_outcome() -> None:
+    with pytest.raises(ValidationError):
+        Workflow(
+            situation="x",
+            sequence=["a"],
+            outcome="unknown",  # type: ignore[arg-type]
+        )
+
+
 def test_reflection_minimal() -> None:
     r = Reflection(
         capability_id="playwright_screenshot",
@@ -78,3 +132,12 @@ def test_reflection_minimal() -> None:
         error="timeout waiting for selector",
     )
     assert r.capability_id == "playwright_screenshot"
+
+
+def test_reflection_rejects_invalid_capability_id() -> None:
+    with pytest.raises(ValidationError):
+        Reflection(
+            capability_id="Has Spaces",
+            situation="x",
+            error="x",
+        )

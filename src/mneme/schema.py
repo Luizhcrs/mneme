@@ -1,64 +1,68 @@
 """Pydantic schemas for capability cards, workflows, and reflections."""
 from __future__ import annotations
 
-import re
-from datetime import datetime
-from typing import Literal
+from datetime import UTC, datetime
+from typing import Annotated, Literal, get_args
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
-CATEGORIES: frozenset[str] = frozenset(
-    {
-        "web_browser",
-        "web_api",
-        "filesystem",
-        "comms",
-        "code_search",
-        "vcs",
-        "data_pipeline",
-        "db",
-        "ml_inference",
-        "ml_training",
-        "nlp",
-        "vision_image",
-        "voice_audio",
-        "audio_media",
-        "desktop_automation",
-        "mobile_dev",
-        "vault_kb",
-        "documentation",
-        "deploy",
-        "cloud_infra",
-        "container",
-        "kubernetes",
-        "monitoring",
-        "testing",
-        "security",
-        "crypto",
-        "agent_orchestration",
-        "automation_rpa",
-        "math_scientific",
-        "finance_trading",
-        "geo_maps",
-        "3d_graphics",
-        "game_engine",
-        "hardware_io",
-        "embedded_iot",
-    }
-)
+Category = Literal[
+    "agent_orchestration",
+    "audio_media",
+    "automation_rpa",
+    "cloud_infra",
+    "code_search",
+    "comms",
+    "container",
+    "crypto",
+    "data_pipeline",
+    "db",
+    "deploy",
+    "desktop_automation",
+    "documentation",
+    "embedded_iot",
+    "filesystem",
+    "finance_trading",
+    "game_engine",
+    "geo_maps",
+    "graphics_3d",
+    "hardware_io",
+    "kubernetes",
+    "math_scientific",
+    "ml_inference",
+    "ml_training",
+    "mobile_dev",
+    "monitoring",
+    "nlp",
+    "security",
+    "testing",
+    "vault_kb",
+    "vcs",
+    "vision_image",
+    "voice_audio",
+    "web_api",
+    "web_browser",
+]
 
-ID_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
+CATEGORIES: frozenset[str] = frozenset(get_args(Category))
+
+ID_PATTERN_STR = r"^[a-z][a-z0-9_]*$"
+CardId = Annotated[str, Field(pattern=ID_PATTERN_STR)]
 
 Source = Literal["mcp", "skill", "plugin", "command", "project", "hermes", "os", "manual"]
 Outcome = Literal["success", "partial", "failure"]
 
 
+def _utcnow() -> datetime:
+    return datetime.now(UTC)
+
+
 class CapabilityCard(BaseModel):
     """A single affordance the agent has access to."""
 
-    id: str
+    id: CardId
     name: str
-    category: str
+    category: Category
     action_verb: str
     triggers: list[str] = Field(min_length=1)
     description: str
@@ -69,23 +73,9 @@ class CapabilityCard(BaseModel):
     source: Source
     namespace: str = "global"
     last_used: datetime | None = None
-    success_count: int = 0
-    failure_count: int = 0
-    decay_score: float = 1.0
-
-    @field_validator("id")
-    @classmethod
-    def _validate_id(cls, v: str) -> str:
-        if not ID_PATTERN.match(v):
-            raise ValueError(f"id must match {ID_PATTERN.pattern}, got {v!r}")
-        return v
-
-    @field_validator("category")
-    @classmethod
-    def _validate_category(cls, v: str) -> str:
-        if v not in CATEGORIES:
-            raise ValueError(f"category must be one of {sorted(CATEGORIES)}, got {v!r}")
-        return v
+    success_count: int = Field(default=0, ge=0)
+    failure_count: int = Field(default=0, ge=0)
+    decay_score: float = Field(default=1.0, ge=0.0, le=1.0)
 
 
 class Workflow(BaseModel):
@@ -94,14 +84,14 @@ class Workflow(BaseModel):
     situation: str
     sequence: list[str] = Field(min_length=1)
     outcome: Outcome
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=_utcnow)
 
 
 class Reflection(BaseModel):
     """A note about a failure, optionally with an LLM-generated reflection."""
 
-    capability_id: str
+    capability_id: CardId
     situation: str
     error: str
     reflection: str | None = None
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=_utcnow)
