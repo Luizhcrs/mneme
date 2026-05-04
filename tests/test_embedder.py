@@ -54,3 +54,23 @@ def test_embedder_raises_on_ollama_unreachable() -> None:
         embedder = OllamaEmbedder()
         with pytest.raises(ConnectionError, match="Ollama"):
             embedder.embed("x")
+
+
+def test_embedder_raises_runtime_error_on_http_status_error() -> None:
+    with respx.mock(base_url="http://localhost:11434") as r:
+        r.post("/api/embeddings").mock(
+            return_value=httpx.Response(404, json={"error": "model 'unknown' not found"})
+        )
+        embedder = OllamaEmbedder(model="unknown")
+        with pytest.raises(RuntimeError, match="returned HTTP 404"):
+            embedder.embed("x")
+
+
+def test_embedder_raises_on_zero_norm_embedding() -> None:
+    with respx.mock(base_url="http://localhost:11434") as r:
+        r.post("/api/embeddings").mock(
+            return_value=httpx.Response(200, json={"embedding": [0.0] * EMBED_DIM})
+        )
+        embedder = OllamaEmbedder()
+        with pytest.raises(ValueError, match="zero-norm"):
+            embedder.embed("x")

@@ -3,11 +3,13 @@ from __future__ import annotations
 
 import httpx
 import numpy as np
+from numpy.typing import NDArray
 
 EMBED_DIM = 768
 DEFAULT_MODEL = "nomic-embed-text"
 DEFAULT_HOST = "http://localhost:11434"
 INSTRUCTION_PREFIX = "Given this task intent, retrieve tools that enable it: "
+DEFAULT_TIMEOUT = 30.0
 
 
 class OllamaEmbedder:
@@ -23,13 +25,13 @@ class OllamaEmbedder:
         self,
         model: str = DEFAULT_MODEL,
         host: str = DEFAULT_HOST,
-        timeout: float = 5.0,
+        timeout: float = DEFAULT_TIMEOUT,
     ) -> None:
         self._model = model
         self._host = host.rstrip("/")
         self._timeout = timeout
 
-    def embed(self, text: str) -> np.ndarray:
+    def embed(self, text: str) -> NDArray[np.float32]:
         prompt = f"{INSTRUCTION_PREFIX}{text}"
         try:
             response = httpx.post(
@@ -37,13 +39,19 @@ class OllamaEmbedder:
                 json={"model": self._model, "prompt": prompt},
                 timeout=self._timeout,
             )
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            raise RuntimeError(
+                f"Ollama at {self._host} returned HTTP {exc.response.status_code}: "
+                f"{exc.response.text[:200]}. "
+                f"Confirm the model `{self._model}` is pulled (`ollama pull {self._model}`)."
+            ) from exc
         except httpx.HTTPError as exc:
             raise ConnectionError(
                 f"Ollama at {self._host} unreachable: {exc}. "
                 f"Run `ollama serve` and `ollama pull {self._model}`."
             ) from exc
 
-        response.raise_for_status()
         raw = response.json()["embedding"]
         if len(raw) != EMBED_DIM:
             raise ValueError(
@@ -52,6 +60,6 @@ class OllamaEmbedder:
 
         vec = np.asarray(raw, dtype=np.float32)
         norm = float(np.linalg.norm(vec))
-        if norm > 0:
-            vec = vec / norm
-        return vec
+        if norm == 0:
+            raise ValueError("Ollama returned a zero-norm embedding; cannot normalize.")
+        return vec / norm
