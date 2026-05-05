@@ -572,8 +572,8 @@
 <p>Hierarquia em dois estágios (AnyTool <a href="https://arxiv.org/abs/2402.04253">arXiv:2402.04253</a>):</p>
 <ol>
 <li>Embeda o prompt com prefixo de instrução: <code>"Given this task intent, retrieve tools that enable it: &lt;prompt&gt;"</code>.</li>
-<li>Top-3 categorias por cosine (35 categorias indexadas em memória na construção do Retriever).</li>
-<li>Top-5 capabilities filtradas pelas categorias, threshold &gt;= 0.65.</li>
+<li>Top-K categorias por cosine (default <code>top_categories=10</code> de 35 indexadas na construção do Retriever; ajustável conforme tamanho do registry).</li>
+<li>Top-N capabilities filtradas pelas categorias, threshold &gt;= 0.65 (default <code>top_capabilities=5</code>).</li>
 <li>Opcionalmente recupera top-3 workflows procedurais cujo <code>situation</code> também passa do threshold.</li>
 <li>Formata o bloco de injeção (schema EasyTool conciso) e coloca no INÍCIO do prompt aumentado.</li>
 </ol>

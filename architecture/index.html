@@ -572,8 +572,8 @@
 <p>Two-stage hierarchy per AnyTool (<a href="https://arxiv.org/abs/2402.04253">arXiv:2402.04253</a>):</p>
 <ol>
 <li>Embed prompt with instruction prefix: <code>"Given this task intent, retrieve tools that enable it: &lt;prompt&gt;"</code>.</li>
-<li>Cosine top-3 categories (35 categories indexed in memory at Retriever construction).</li>
-<li>Cosine top-5 capabilities filtered by those categories, threshold &gt;= 0.65.</li>
+<li>Cosine top-K categories (default <code>top_categories=10</code> of 35 indexed at Retriever construction; tunable per registry size).</li>
+<li>Cosine top-N capabilities filtered by those categories, threshold &gt;= 0.65 (default <code>top_capabilities=5</code>).</li>
 <li>Optionally retrieve top-3 procedural workflows whose <code>situation</code> cosine to the prompt also clears the threshold.</li>
 <li>Format the injection block (EasyTool concise schema) and place it at the START of the augmented prompt.</li>
 </ol>
