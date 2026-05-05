@@ -1,0 +1,122 @@
+site_name: mneme
+site_description: Capability-recall layer for Claude Code. Your AI never forgets what it can do.
+site_url: https://luizhcrs.github.io/mneme/
+repo_url: https://github.com/Luizhcrs/mneme
+repo_name: Luizhcrs/mneme
+edit_uri: edit/main/docs/
+copyright: Copyright (c) 2026 Luiz Henrique Cavalcanti Ramos da Silva. MIT License.
+
+theme:
+  name: material
+  language: en
+  logo: mnemosine.png
+  favicon: mnemosine.png
+  font:
+    text: Inter
+    code: JetBrains Mono
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - navigation.indexes
+    - navigation.footer
+    - search.highlight
+    - search.share
+    - search.suggest
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - toc.follow
+    - toc.integrate
+
+extra:
+  alternate:
+    - name: English
+      link: /mneme/
+      lang: en
+    - name: Português
+      link: /mneme/pt-BR/
+      lang: pt-BR
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/Luizhcrs/mneme
+      name: GitHub repository
+
+exclude_docs: |
+  superpowers/
+
+plugins:
+  - search
+  - i18n:
+      docs_structure: suffix
+      reconfigure_material: true
+      reconfigure_search: true
+      languages:
+        - locale: en
+          default: true
+          name: English
+          build: true
+        - locale: pt-BR
+          name: Português
+          build: true
+          nav_translations:
+            Home: Início
+            Quickstart: Início rápido
+            Architecture: Arquitetura
+            Capability cards: Capability cards
+            Categories: Categorias
+            Roadmap: Roadmap
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+nav:
+  - Home: index.md
+  - Quickstart: quickstart.md
+  - Architecture: architecture.md
+  - Capability cards: capability-card-format.md
+  - Categories: categories.md
+  - Roadmap: roadmap.md

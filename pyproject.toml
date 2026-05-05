@@ -37,6 +37,11 @@ dev = [
     "respx>=0.21",
     "types-PyYAML>=6.0",
 ]
+docs = [
+    "mkdocs>=1.6",
+    "mkdocs-material>=9.5",
+    "mkdocs-static-i18n>=1.2",
+]
 
 [project.scripts]
 mneme = "mneme.cli:app"
