@@ -13,6 +13,7 @@ from mneme import paths
 from mneme.embedder import OllamaEmbedder
 from mneme.feedback import FeedbackStore
 from mneme.loader import load_capabilities, seed_store
+from mneme.reflexion import consolidate as reflect_consolidate
 from mneme.retrieve import Retriever
 from mneme.scanner import scan_all
 from mneme.store import SqliteStore
@@ -204,6 +205,24 @@ def verify() -> None:
     )
     typer.echo(result.render())
     typer.echo("capabilities.yaml updated. Run `mneme reindex` to apply to the search index.")
+
+
+@app.command()
+def reflect() -> None:
+    """Consolidate failures.log into reflections that surface on similar prompts.
+
+    Walks every failure entry produced by the PostToolUse hook and writes
+    a templated lesson into reflections.jsonl with the prompt embedding so
+    the retrieval layer can match it against future queries. Idempotent —
+    re-runs produce no duplicates.
+    """
+    embedder = OllamaEmbedder()
+    written = reflect_consolidate(
+        failure_log_path=paths.failure_log(),
+        reflection_store_path=paths.reflections_jsonl(),
+        embedder=embedder,
+    )
+    typer.echo(f"wrote {written} new reflections")
 
 
 @app.command()

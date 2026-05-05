@@ -8,6 +8,7 @@ from numpy.typing import NDArray
 
 from mneme.categories import CATEGORY_DESCRIPTIONS
 from mneme.feedback import FeedbackStore
+from mneme.reflexion import ReflectionStore
 from mneme.schema import CapabilityCard, Workflow
 from mneme.store import JsonlStore, SqliteStore
 from mneme.types import EmbedderProto
@@ -18,6 +19,7 @@ class RetrievalResult:
     capabilities: list[tuple[CapabilityCard, float]] = field(default_factory=list)
     categories: list[str] = field(default_factory=list)
     workflows: list[list[str]] = field(default_factory=list)
+    reflections: list[str] = field(default_factory=list)
 
     def render(self) -> str:
         """Render injection block. Caller MUST place this at the START of the prompt
@@ -29,7 +31,7 @@ class RetrievalResult:
         unsure; a passive list of names is not enough — the directive raises
         the bar to "use one of these or justify why none fit".
         """
-        if not self.capabilities and not self.workflows:
+        if not self.capabilities and not self.workflows and not self.reflections:
             return ""
         lines = [
             "<capabilities-available>",
@@ -50,6 +52,8 @@ class RetrievalResult:
             )
         for seq in self.workflows:
             lines.append(f"- workflow that worked before: {' -> '.join(seq)}")
+        for lesson in self.reflections:
+            lines.append(f"- reflection from past failure: {lesson}")
         lines.append("</capabilities-available>")
         return "\n".join(lines)
 
@@ -81,6 +85,9 @@ class Retriever:
         lexical_weight: float = 1.0,
         feedback_store: FeedbackStore | None = None,
         feedback_threshold: float = 0.80,
+        reflection_store: ReflectionStore | None = None,
+        reflection_threshold: float = 0.75,
+        top_reflections: int = 2,
     ) -> None:
         """Default top_categories=10 — empirically validated on the 50-task
         benchmark with real Ollama nomic-embed-text. Lower values (3) over-
@@ -103,6 +110,9 @@ class Retriever:
         self._lexical_weight = lexical_weight
         self._feedback_store = feedback_store
         self._feedback_threshold = feedback_threshold
+        self._reflection_store = reflection_store
+        self._reflection_threshold = reflection_threshold
+        self._top_reflections = top_reflections
         self._category_vectors = self._build_category_index()
 
     def _build_category_index(self) -> dict[str, NDArray[np.float32]]:
@@ -199,6 +209,17 @@ class Retriever:
         rest = [pair for i, pair in enumerate(merged) if i != promoted_index]
         return [(promoted_card, new_top_score), *rest][: self._top_capabilities]
 
+    def _retrieve_reflections(self, query_vec: NDArray[np.float32]) -> list[str]:
+        if self._reflection_store is None:
+            return []
+        scored: list[tuple[float, str]] = []
+        for r in self._reflection_store.iter_all():
+            sim = float(np.dot(query_vec, r.embedding))
+            if sim >= self._reflection_threshold:
+                scored.append((sim, r.lesson))
+        scored.sort(key=lambda t: t[0], reverse=True)
+        return [lesson for _, lesson in scored[: self._top_reflections]]
+
     def retrieve(self, prompt: str) -> RetrievalResult:
         query_vec = self._embedder.embed(prompt)
         cats = self._top_categories_for(query_vec)
@@ -217,4 +238,10 @@ class Retriever:
         caps = self._rrf_fuse(semantic, lexical)
         caps = self._feedback_boost(query_vec, caps)
         workflows = self._retrieve_workflows(query_vec)
-        return RetrievalResult(capabilities=caps, categories=cats, workflows=workflows)
+        reflections = self._retrieve_reflections(query_vec)
+        return RetrievalResult(
+            capabilities=caps,
+            categories=cats,
+            workflows=workflows,
+            reflections=reflections,
+        )
