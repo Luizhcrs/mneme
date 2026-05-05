@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import os
 import time
 from dataclasses import dataclass
@@ -15,6 +16,11 @@ from mneme.embedder import EMBED_DIM
 from mneme.loader import seed_store
 from mneme.retrieve import Retriever
 from mneme.store import SqliteStore
+
+
+def _stable_seed(text: str) -> int:
+    digest = hashlib.md5(text.lower().encode("utf-8")).digest()
+    return int.from_bytes(digest[:4], "little")
 
 
 @dataclass
@@ -47,7 +53,7 @@ class _DeterministicEmbedder:
     def embed(self, text: str) -> NDArray[np.float32]:
         key = text.lower()
         if key not in self._cache:
-            rng = np.random.default_rng(abs(hash(key)) % (2**32))
+            rng = np.random.default_rng(_stable_seed(key))
             v = rng.standard_normal(EMBED_DIM).astype(np.float32)
             self._cache[key] = v / np.linalg.norm(v)
         return self._cache[key]
