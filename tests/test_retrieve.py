@@ -91,3 +91,30 @@ def test_render_empty_when_no_results(seeded_store: SqliteStore) -> None:
     retriever = Retriever(seeded_store, embedder, threshold=0.65)
     result = retriever.retrieve("nope")
     assert result.render() == ""
+
+
+def test_category_filter_excludes_capabilities_outside_top_categories(
+    seeded_store: SqliteStore,
+) -> None:
+    """With top_categories=1, only capabilities in the highest-scoring category surface.
+
+    The seeded store has 3 capabilities in 3 distinct categories
+    (web_browser, filesystem, comms). The fake embedder uses "headless" as a
+    discriminator that appears only in the web_browser category description.
+    With top_categories=1 the filter must pick web_browser exclusively, so
+    the filesystem and comms capabilities are excluded even though they exist.
+    """
+    web_vec = _unit(1)
+    embedder = _FakeEmbedder({"headless": web_vec})
+    retriever = Retriever(
+        seeded_store,
+        embedder,
+        top_categories=1,
+        top_capabilities=10,
+        threshold=0.0,
+    )
+    result = retriever.retrieve("need a headless browser session")
+    ids = [c.id for c, _ in result.capabilities]
+    assert "playwright" in ids
+    assert "read_file" not in ids
+    assert "telegram" not in ids

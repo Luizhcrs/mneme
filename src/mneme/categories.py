@@ -41,4 +41,11 @@ CATEGORY_DESCRIPTIONS: dict[str, str] = {
     "web_browser": "browser automation scraping headless rendering screenshots",
 }
 
-assert set(CATEGORY_DESCRIPTIONS) == CATEGORIES, "category description coverage mismatch"
+_described = set(CATEGORY_DESCRIPTIONS)
+if _described != CATEGORIES:
+    raise RuntimeError(
+        "categories.py coverage mismatch: "
+        f"missing={sorted(CATEGORIES - _described)}, "
+        f"extra={sorted(_described - CATEGORIES)}"
+    )
+del _described
