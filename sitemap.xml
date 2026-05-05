@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+    <url>
+        <loc>https://luizhcrs.github.io/mneme/</loc>
+        <lastmod>2026-05-05</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://luizhcrs.github.io/mneme/"/>
+        <xhtml:link rel="alternate" hreflang="pt-BR" href="https://luizhcrs.github.io/mneme/pt-BR/"/>
+    </url>
+    <url>
+        <loc>https://luizhcrs.github.io/mneme/architecture/</loc>
+        <lastmod>2026-05-05</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://luizhcrs.github.io/mneme/architecture/"/>
+        <xhtml:link rel="alternate" hreflang="pt-BR" href="https://luizhcrs.github.io/mneme/pt-BR/architecture/"/>
+    </url>
+    <url>
+        <loc>https://luizhcrs.github.io/mneme/capability-card-format/</loc>
+        <lastmod>2026-05-05</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://luizhcrs.github.io/mneme/capability-card-format/"/>
+        <xhtml:link rel="alternate" hreflang="pt-BR" href="https://luizhcrs.github.io/mneme/pt-BR/capability-card-format/"/>
+    </url>
+    <url>
+        <loc>https://luizhcrs.github.io/mneme/categories/</loc>
+        <lastmod>2026-05-05</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://luizhcrs.github.io/mneme/categories/"/>
+        <xhtml:link rel="alternate" hreflang="pt-BR" href="https://luizhcrs.github.io/mneme/pt-BR/categories/"/>
+    </url>
+    <url>
+        <loc>https://luizhcrs.github.io/mneme/quickstart/</loc>
+        <lastmod>2026-05-05</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://luizhcrs.github.io/mneme/quickstart/"/>
+        <xhtml:link rel="alternate" hreflang="pt-BR" href="https://luizhcrs.github.io/mneme/pt-BR/quickstart/"/>
+    </url>
+    <url>
+        <loc>https://luizhcrs.github.io/mneme/roadmap/</loc>
+        <lastmod>2026-05-05</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://luizhcrs.github.io/mneme/roadmap/"/>
+        <xhtml:link rel="alternate" hreflang="pt-BR" href="https://luizhcrs.github.io/mneme/pt-BR/roadmap/"/>
+    </url>
+    <url>
+        <loc>https://luizhcrs.github.io/mneme/pt-BR/</loc>
+        <lastmod>2026-05-05</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="pt-BR" href="https://luizhcrs.github.io/mneme/pt-BR/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://luizhcrs.github.io/mneme/"/>
+    </url>
+    <url>
+        <loc>https://luizhcrs.github.io/mneme/pt-BR/architecture/</loc>
+        <lastmod>2026-05-05</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="pt-BR" href="https://luizhcrs.github.io/mneme/pt-BR/architecture/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://luizhcrs.github.io/mneme/architecture/"/>
+    </url>
+    <url>
+        <loc>https://luizhcrs.github.io/mneme/pt-BR/capability-card-format/</loc>
+        <lastmod>2026-05-05</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="pt-BR" href="https://luizhcrs.github.io/mneme/pt-BR/capability-card-format/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://luizhcrs.github.io/mneme/capability-card-format/"/>
+    </url>
+    <url>
+        <loc>https://luizhcrs.github.io/mneme/pt-BR/categories/</loc>
+        <lastmod>2026-05-05</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="pt-BR" href="https://luizhcrs.github.io/mneme/pt-BR/categories/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://luizhcrs.github.io/mneme/categories/"/>
+    </url>
+    <url>
+        <loc>https://luizhcrs.github.io/mneme/pt-BR/quickstart/</loc>
+        <lastmod>2026-05-05</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="pt-BR" href="https://luizhcrs.github.io/mneme/pt-BR/quickstart/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://luizhcrs.github.io/mneme/quickstart/"/>
+    </url>
+    <url>
+        <loc>https://luizhcrs.github.io/mneme/pt-BR/roadmap/</loc>
+        <lastmod>2026-05-05</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="pt-BR" href="https://luizhcrs.github.io/mneme/pt-BR/roadmap/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://luizhcrs.github.io/mneme/roadmap/"/>
+    </url>
+</urlset>
