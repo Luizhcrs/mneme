@@ -170,6 +170,35 @@ def test_post_tool_use_logs_failure_to_log_file(
     assert "selector not found" in failures
 
 
+def test_hook_uses_regex_fallback_when_ollama_offline(
+    seeded_env: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("MNEME_FALLBACK", "1")
+    with respx.mock(base_url="http://localhost:11434", assert_all_called=False) as r:
+        r.post("/api/embeddings").mock(side_effect=httpx.ConnectError("down"))
+        stdin = io.StringIO(json.dumps({"prompt": "manda mensagem no telegram"}))
+        stdout = io.StringIO()
+        rc = run_hook(stdin=stdin, stdout=stdout)
+    assert rc == 0
+    out = stdout.getvalue()
+    assert "<capabilities-available>" in out
+    assert "telegram_send" in out
+    assert "fallback" in out
+
+
+def test_hook_does_not_use_fallback_without_opt_in(
+    seeded_env: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("MNEME_FALLBACK", raising=False)
+    with respx.mock(base_url="http://localhost:11434", assert_all_called=False) as r:
+        r.post("/api/embeddings").mock(side_effect=httpx.ConnectError("down"))
+        stdin = io.StringIO(json.dumps({"prompt": "manda mensagem no telegram"}))
+        stdout = io.StringIO()
+        rc = run_hook(stdin=stdin, stdout=stdout)
+    assert rc == 0
+    assert stdout.getvalue() == ""
+
+
 def test_post_tool_use_passes_through_on_invalid_json(
     tmp_mneme_dir: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

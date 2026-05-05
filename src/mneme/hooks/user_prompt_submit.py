@@ -2,14 +2,58 @@
 from __future__ import annotations
 
 import json
+import os
+import sqlite3
 import sys
+from pathlib import Path
 from typing import IO
 
 from mneme import paths
 from mneme.embedder import OllamaEmbedder
 from mneme.retrieve import Retriever
-from mneme.schema import Workflow
+from mneme.schema import CapabilityCard, Workflow
 from mneme.store import JsonlStore, SqliteStore
+
+
+def _regex_fallback(prompt: str, db_path: Path, stdout: IO[str]) -> int:
+    """Opt-in degraded path when Ollama is unreachable.
+
+    Triggered only by `MNEME_FALLBACK=1`. Reads capabilities directly from
+    SQLite (no extension load needed), and matches their `triggers` field
+    against the prompt as case-insensitive substrings. Better than nothing
+    when Ollama is down.
+    """
+    if os.environ.get("MNEME_FALLBACK") != "1":
+        return 0
+    try:
+        conn = sqlite3.connect(db_path)
+        cur = conn.execute("SELECT json FROM capabilities")
+        rows = cur.fetchall()
+        conn.close()
+    except sqlite3.Error:
+        return 0
+
+    matches: list[CapabilityCard] = []
+    prompt_l = prompt.lower()
+    for (raw_json,) in rows:
+        card = CapabilityCard.model_validate_json(raw_json)
+        for trigger in card.triggers:
+            if trigger.lower() in prompt_l:
+                matches.append(card)
+                break
+
+    if not matches:
+        return 0
+
+    lines = ["<capabilities-available>"]
+    for card in matches[:5]:
+        lines.append(
+            f"- [{card.id}] {card.name} ({card.category}, fallback)\n"
+            f"  verb: {card.action_verb}"
+        )
+    lines.append("</capabilities-available>")
+    stdout.write("\n".join(lines))
+    return 0
 
 
 def run_hook(
@@ -46,8 +90,10 @@ def run_hook(
         )
         retriever = Retriever(store, embedder, workflow_store=wf_store)
         result = retriever.retrieve(prompt)
-    except (ConnectionError, ValueError, RuntimeError, OSError):
-        return 0  # fail-safe: any failure exits silently
+    except ConnectionError:
+        return _regex_fallback(prompt, db_path, stdout)
+    except (ValueError, RuntimeError, OSError):
+        return 0
 
     rendered = result.render()
     if rendered:
