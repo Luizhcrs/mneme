@@ -93,6 +93,34 @@ def test_render_empty_when_no_results(seeded_store: SqliteStore) -> None:
     assert result.render() == ""
 
 
+def test_retriever_includes_top_workflows(tmp_mneme_dir: Path, seeded_store: SqliteStore) -> None:
+    from mneme.schema import Workflow
+    from mneme.store import JsonlStore
+
+    wf_store = JsonlStore[Workflow](tmp_mneme_dir / "procedural.jsonl", Workflow)
+    wf_store.append(
+        Workflow(
+            situation="screenshot example.com",
+            sequence=["playwright_goto", "playwright_screenshot"],
+            outcome="success",
+        )
+    )
+
+    web_vec = _unit(1)
+    embedder = _FakeEmbedder({"screenshot": web_vec, "headless": web_vec})
+    retriever = Retriever(
+        seeded_store,
+        embedder,
+        threshold=0.0,
+        workflow_store=wf_store,
+        top_workflows=3,
+    )
+    result = retriever.retrieve("screenshot the homepage")
+    assert any(seq[0] == "playwright_goto" for seq in result.workflows)
+    rendered = result.render()
+    assert "workflow that worked before" in rendered
+
+
 def test_category_filter_excludes_capabilities_outside_top_categories(
     seeded_store: SqliteStore,
 ) -> None:

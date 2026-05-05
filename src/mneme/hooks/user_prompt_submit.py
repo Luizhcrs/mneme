@@ -8,7 +8,8 @@ from typing import IO
 from mneme import paths
 from mneme.embedder import OllamaEmbedder
 from mneme.retrieve import Retriever
-from mneme.store import SqliteStore
+from mneme.schema import Workflow
+from mneme.store import JsonlStore, SqliteStore
 
 
 def run_hook(
@@ -39,7 +40,11 @@ def run_hook(
     try:
         store = SqliteStore(db_path)
         embedder = OllamaEmbedder()
-        retriever = Retriever(store, embedder)
+        wf_path = paths.procedural_jsonl()
+        wf_store = (
+            JsonlStore[Workflow](wf_path, Workflow) if wf_path.exists() else None
+        )
+        retriever = Retriever(store, embedder, workflow_store=wf_store)
         result = retriever.retrieve(prompt)
     except (ConnectionError, ValueError, RuntimeError, OSError):
         return 0  # fail-safe: any failure exits silently
