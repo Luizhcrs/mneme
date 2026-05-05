@@ -1,25 +1,28 @@
 - id: playwright_screenshot
   name: Playwright Screenshot
   category: web_browser
-  action_verb: "captures image of a rendered web page"
-  triggers: [screenshot, scrape visual, captura site, print site]
+  action_verb: "captures image of a rendered web page (print de site)"
+  triggers: [screenshot site, scrape visual, captura site, print site, print da pagina, tira print do site]
   description: |
-    MCP Playwright. Renders a page in headless Chromium and returns a PNG.
-    Supports SPAs by waiting for selectors before capture.
+    MCP Playwright. Renders a web page in headless Chromium and returns a PNG.
+    Tira print de pagina web, site, URL. Suporta SPAs by waiting for selectors.
+    Diferente de pyautogui_screenshot (que captura o desktop local).
   params_required: [url]
   params_optional: [selector, viewport, wait_for]
   example: |
-    Task: "screenshot the homepage of example.com"
-    Call: playwright.screenshot(url="https://example.com", selector="#hero")
+    Task: "tira print da home da carteira-ia"
+    Call: playwright.screenshot(url="https://carteira.ia", selector="#hero")
   schema_version: "1.45"
   source: mcp
 
 - id: playwright_goto
   name: Playwright Navigate
   category: web_browser
-  action_verb: "navigates a headless browser to a URL"
-  triggers: [navigate, goto, abrir site, open page]
-  description: MCP Playwright page.goto with optional wait conditions.
+  action_verb: "navigates a headless browser to a URL (abre pagina web)"
+  triggers: [navigate, goto, abrir site, open page, abre pagina, navegar para url]
+  description: |
+    MCP Playwright page.goto. Abre uma URL no navegador headless.
+    Para acessar sites e paginas web programaticamente.
   params_required: [url]
   params_optional: [wait_until]
   example: 'Call: playwright.goto(url="https://example.com")'
@@ -29,21 +32,25 @@
 - id: filesystem_read
   name: Filesystem Read
   category: filesystem
-  action_verb: "reads file contents from disk"
-  triggers: [read file, lê arquivo, ler arquivo, open file]
-  description: Standard filesystem read with UTF-8 default encoding.
+  action_verb: "reads file contents from disk (le arquivo do disco)"
+  triggers: [read file, le arquivo, ler arquivo, abrir arquivo, open file, le log, le config]
+  description: |
+    Filesystem read with UTF-8 default encoding.
+    Le conteudo de um arquivo no disco. Usar para ler logs, configuracao, dados.
   params_required: [path]
   params_optional: [encoding]
-  example: 'Call: filesystem.read(path="/tmp/x.txt")'
+  example: 'Call: filesystem.read(path="/var/log/app.log")'
   schema_version: "1"
   source: os
 
 - id: telegram_send
   name: Telegram Send Message
   category: comms
-  action_verb: "sends a message to a Telegram chat"
-  triggers: [telegram, manda mensagem, notifica, alerta]
-  description: MCP Telegram plugin. Sends text to a chat_id.
+  action_verb: "sends a message to a Telegram chat (manda mensagem no Telegram)"
+  triggers: [telegram, manda mensagem telegram, notifica telegram, alerta telegram, avisa telegram]
+  description: |
+    MCP Telegram plugin. Envia mensagem de texto para um chat_id.
+    Usado para notificar deploy, alerta, status, aviso via Telegram.
   params_required: [chat_id, text]
   params_optional: [parse_mode]
   example: 'Call: telegram.send(chat_id="503171704", text="deploy ok")'
@@ -53,69 +60,87 @@
 - id: github_create_issue
   name: GitHub Create Issue
   category: vcs
-  action_verb: "creates a GitHub issue"
-  triggers: [github issue, abre issue, cria issue]
-  description: gh CLI wrapper. Requires GH_TOKEN.
+  action_verb: "creates a GitHub issue (abre issue no GitHub)"
+  triggers: [github issue, abre issue, cria issue, novo issue github, reportar bug github]
+  description: |
+    gh CLI wrapper. Cria uma nova issue em um repositorio do GitHub.
+    Usar para reportar bug, criar tarefa, registrar feedback no repo.
+    Requer GH_TOKEN.
   params_required: [repo, title]
   params_optional: [body, labels]
-  example: 'Call: gh.issue.create(repo="x/y", title="bug")'
+  example: 'Call: gh.issue.create(repo="x/y", title="bug nas paginas de login")'
   schema_version: "1"
   source: os
 
 - id: ollama_generate
   name: Ollama Generate
   category: ml_inference
-  action_verb: "runs local LLM inference via Ollama"
-  triggers: [llm local, gera texto local, ollama]
-  description: Local LLM call via Ollama HTTP API.
+  action_verb: "runs local LLM inference via Ollama (roda modelo de IA local)"
+  triggers: [ollama, llm local, gera texto local, roda modelo, modelo local, ia local]
+  description: |
+    Local LLM call via Ollama HTTP API. Roda modelo de IA local
+    (llama, mistral, qwen) para gerar texto, responder pergunta, sumarizar.
+    Sem custo de API. Privacidade local.
   params_required: [model, prompt]
   params_optional: [temperature, max_tokens]
-  example: 'Call: ollama.generate(model="llama3", prompt="hi")'
+  example: 'Call: ollama.generate(model="llama3", prompt="resume este texto")'
   schema_version: "0.5"
   source: os
 
 - id: docker_compose_up
   name: Docker Compose Up
   category: container
-  action_verb: "starts services defined in a docker-compose file"
-  triggers: [docker compose, sobe servico, deploy local]
-  description: Wrapper for `docker compose up -d`.
+  action_verb: "starts services defined in a docker-compose file (sobe containers)"
+  triggers: [docker compose, sobe servicos docker, deploy local, sobe containers, levanta docker]
+  description: |
+    Wrapper for `docker compose up -d`. Sobe os servicos definidos
+    em docker-compose.yaml em modo daemon. Para subir ambiente local,
+    iniciar containers do projeto, levantar stack de desenvolvimento.
   params_required: [project_dir]
   params_optional: [services, build]
-  example: 'Call: compose.up(project_dir="/path", build=true)'
+  example: 'Call: compose.up(project_dir="/home/luiz/app", build=true)'
   schema_version: "1"
   source: os
 
 - id: postgres_query
   name: PostgreSQL Query
   category: db
-  action_verb: "executes a SQL query against PostgreSQL"
-  triggers: [sql, postgres, banco, query]
-  description: Parameterized SQL via psycopg.
+  action_verb: "executes a SQL query against PostgreSQL (consulta no banco postgres)"
+  triggers: [sql, postgres, banco postgres, query banco, consulta banco, select postgres, banco de dados]
+  description: |
+    Parameterized SQL query via psycopg. Executa SELECT, INSERT, UPDATE,
+    DELETE em banco PostgreSQL. Para consultar dados, modificar tabelas,
+    rodar query no banco de dados.
   params_required: [dsn, sql]
   params_optional: [params]
-  example: 'Call: pg.query(dsn="postgres://...", sql="SELECT 1")'
+  example: 'Call: pg.query(dsn="postgres://...", sql="SELECT id, email FROM users LIMIT 10")'
   schema_version: "16"
   source: os
 
 - id: obsidian_search_vault
   name: Obsidian Vault Search
   category: vault_kb
-  action_verb: "searches the Obsidian vault by full text and tags"
-  triggers: [obsidian, vault, busca nota, search note]
-  description: Searches vault notes by query and tag filter.
+  action_verb: "searches the Obsidian vault by full text and tags (busca notas no Obsidian)"
+  triggers: [obsidian, vault, busca nota, search note, busca obsidian, encontra nota]
+  description: |
+    Searches Obsidian vault notes by query and tag filter.
+    Busca notas no vault do Obsidian por texto e tag.
+    Para encontrar conhecimento salvo, recuperar insights, buscar anotacao.
   params_required: [query]
   params_optional: [tag, limit]
-  example: 'Call: vault.search(query="memory", tag="projeto")'
+  example: 'Call: vault.search(query="memoria llm", tag="projeto")'
   schema_version: "1"
   source: project
 
 - id: pyautogui_screenshot
   name: PyAutoGUI Screenshot
   category: desktop_automation
-  action_verb: "takes a screenshot of the local desktop"
-  triggers: [print da tela, captura desktop, screenshot tela]
-  description: Captures full screen or region via PyAutoGUI.
+  action_verb: "takes a screenshot of the local desktop (print da tela do computador)"
+  triggers: [print da tela, captura desktop, screenshot tela, print do desktop, captura tela do pc]
+  description: |
+    Captures full screen or region via PyAutoGUI.
+    Tira print da tela DO COMPUTADOR (desktop local), nao de um site.
+    Para capturar interface de aplicativo, janela, area da tela.
   params_required: []
   params_optional: [region]
   example: 'Call: pyautogui.screenshot()'
