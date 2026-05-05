@@ -98,7 +98,7 @@
     iniciar containers do projeto, levantar stack de desenvolvimento.
   params_required: [project_dir]
   params_optional: [services, build]
-  example: 'Call: compose.up(project_dir="/home/luiz/app", build=true)'
+  example: 'Call: compose.up(project_dir="/path/to/project", build=true)'
   schema_version: "1"
   source: os
 

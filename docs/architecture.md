@@ -23,8 +23,8 @@ Hooks declared in `~/.claude/settings.json`:
 Two-stage hierarchy per AnyTool ([arXiv:2402.04253](https://arxiv.org/abs/2402.04253)):
 
 1. Embed prompt with instruction prefix: `"Given this task intent, retrieve tools that enable it: <prompt>"`.
-2. Cosine top-3 categories (35 categories indexed in memory at Retriever construction).
-3. Cosine top-5 capabilities filtered by those categories, threshold >= 0.65.
+2. Cosine top-K categories (default `top_categories=10` of 35 indexed at Retriever construction; tunable per registry size).
+3. Cosine top-N capabilities filtered by those categories, threshold >= 0.65 (default `top_capabilities=5`).
 4. Optionally retrieve top-3 procedural workflows whose `situation` cosine to the prompt also clears the threshold.
 5. Format the injection block (EasyTool concise schema) and place it at the START of the augmented prompt.
 

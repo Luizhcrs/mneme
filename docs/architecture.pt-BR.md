@@ -23,8 +23,8 @@ Hooks declarados em `~/.claude/settings.json`:
 Hierarquia em dois estágios (AnyTool [arXiv:2402.04253](https://arxiv.org/abs/2402.04253)):
 
 1. Embeda o prompt com prefixo de instrução: `"Given this task intent, retrieve tools that enable it: <prompt>"`.
-2. Top-3 categorias por cosine (35 categorias indexadas em memória na construção do Retriever).
-3. Top-5 capabilities filtradas pelas categorias, threshold >= 0.65.
+2. Top-K categorias por cosine (default `top_categories=10` de 35 indexadas na construção do Retriever; ajustável conforme tamanho do registry).
+3. Top-N capabilities filtradas pelas categorias, threshold >= 0.65 (default `top_capabilities=5`).
 4. Opcionalmente recupera top-3 workflows procedurais cujo `situation` também passa do threshold.
 5. Formata o bloco de injeção (schema EasyTool conciso) e coloca no INÍCIO do prompt aumentado.
 

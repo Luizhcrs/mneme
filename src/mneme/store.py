@@ -140,7 +140,13 @@ class SqliteStore:
                 continue
             if categories is not None and card.category not in categories:
                 continue
-            similarity = 1.0 - (float(distance) / 2.0)
+            # sqlite-vec returns Euclidean (L2) distance. For unit-normalized
+            # vectors, the relation to cosine similarity is:
+            #   ||u - v||^2 = 2 - 2 * cos(u, v)
+            # so cos = 1 - L2^2 / 2. Both index and query vectors are L2
+            # normalized by OllamaEmbedder, so this conversion is exact.
+            l2 = float(distance)
+            similarity = 1.0 - (l2 * l2) / 2.0
             if similarity < threshold:
                 continue
             out.append((card, similarity))

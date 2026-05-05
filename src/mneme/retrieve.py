@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Protocol, runtime_checkable
 
 import numpy as np
 from numpy.typing import NDArray
@@ -10,11 +9,7 @@ from numpy.typing import NDArray
 from mneme.categories import CATEGORY_DESCRIPTIONS
 from mneme.schema import CapabilityCard, Workflow
 from mneme.store import JsonlStore, SqliteStore
-
-
-@runtime_checkable
-class _EmbedderProto(Protocol):
-    def embed(self, text: str) -> NDArray[np.float32]: ...
+from mneme.types import EmbedderProto
 
 
 @dataclass
@@ -49,7 +44,7 @@ class Retriever:
     def __init__(
         self,
         store: SqliteStore,
-        embedder: _EmbedderProto,
+        embedder: EmbedderProto,
         top_categories: int = 10,
         top_capabilities: int = 5,
         threshold: float = 0.65,

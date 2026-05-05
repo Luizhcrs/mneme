@@ -44,7 +44,7 @@ mneme fills that gap.
 mneme keeps a local, semantic index of every capability your agent has access to and **injects the relevant ones at the start of every prompt** — automatically, on every turn, with no agent-side awareness required.
 
 ```bash
-pip install mneme
+pip install git+https://github.com/Luizhcrs/mneme.git
 ollama pull nomic-embed-text
 mneme init && mneme reindex
 ```
@@ -75,6 +75,9 @@ Measured on a 50-task benchmark (real `nomic-embed-text` via Ollama, mixed EN+PT
 | **Margin over the published baseline** | **+51 percentage points** |
 
 In plain English: **9 out of 10 times the agent gets the right tool on the first try**, with no fine-tuning, no cloud account, and a generic embedding model running on your laptop. The acceptance gate is reproducible — `MNEME_REAL_OLLAMA=1 pytest tests/test_benchmark_acceptance.py`.
+
+!!! note "About these numbers"
+    The Phase 1 benchmark uses a 10-card seed registry and 50 queries (every query has a correct answer in the registry). top-3 = top-5 because retrieving 5 of 10 capabilities saturates recall at this scale. The CPU latency (2.6 s) is dominated by Ollama; on GPU it drops to 50–100 ms. Phase 2 will publish results on a 200+ card registry with no-match negatives — see [the roadmap](ROADMAP.md).
 
 ## What it looks like in practice
 
@@ -161,7 +164,7 @@ mneme preenche essa lacuna.
 mneme mantém um índice local e semântico de cada capability que teu agente tem acesso e **injeta as relevantes no início de cada prompt** — automaticamente, em toda interação, sem o agente precisar saber que existe.
 
 ```bash
-pip install mneme
+pip install git+https://github.com/Luizhcrs/mneme.git
 ollama pull nomic-embed-text
 mneme init && mneme reindex
 ```

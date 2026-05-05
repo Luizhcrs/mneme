@@ -35,3 +35,6 @@ Thumbs.db
 
 # MkDocs
 site/
+
+# Internal planning docs (kept out of public repo)
+docs/superpowers/

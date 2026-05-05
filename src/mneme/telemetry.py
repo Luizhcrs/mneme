@@ -26,7 +26,7 @@ from typing import Any
 from mneme import paths
 
 _PT_BR_HINTS = re.compile(
-    r"\b(de|do|da|e|para|que|tu|com|ja|nao|nao|seu|sua|um|uma|os|as|"
+    r"\b(de|do|da|e|para|que|tu|com|ja|nao|seu|sua|um|uma|os|as|"
     r"executa|consulta|busca|le|abre|sobe|tira|manda|notifica|alerta|"
     r"avisa|cria|roda|faz|usuario)\b",
     re.IGNORECASE,

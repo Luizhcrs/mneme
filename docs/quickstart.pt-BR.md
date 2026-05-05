@@ -9,7 +9,7 @@
 ## Instalar
 
 ```bash
-pip install mneme
+pip install git+https://github.com/Luizhcrs/mneme.git
 ollama pull nomic-embed-text
 mneme init
 mneme reindex

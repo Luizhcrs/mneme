@@ -2,20 +2,13 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Protocol, runtime_checkable
 
-import numpy as np
 import yaml
-from numpy.typing import NDArray
 
 from mneme.embedder import OllamaEmbedder
 from mneme.schema import CapabilityCard
 from mneme.store import SqliteStore
-
-
-@runtime_checkable
-class _EmbedderProto(Protocol):
-    def embed(self, text: str) -> NDArray[np.float32]: ...
+from mneme.types import EmbedderProto
 
 
 def load_capabilities(path: Path) -> list[CapabilityCard]:
@@ -36,7 +29,7 @@ def load_capabilities(path: Path) -> list[CapabilityCard]:
 def seed_store(
     yaml_path: Path,
     store: SqliteStore,
-    embedder: _EmbedderProto | None = None,
+    embedder: EmbedderProto | None = None,
 ) -> int:
     """Load YAML and embed-and-upsert each card into the store. Returns count."""
     embedder = embedder or OllamaEmbedder()
