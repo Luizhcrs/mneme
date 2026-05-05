@@ -4,6 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 from mneme.embedder import EMBED_DIM
 from mneme.schema import CapabilityCard, Reflection, Workflow
@@ -89,3 +90,27 @@ def test_jsonl_store_reflection_roundtrip(tmp_mneme_dir: Path) -> None:
     store.append(r)
     items = list(store.iter_all())
     assert items[0].error == "boom"
+
+
+def test_sqlite_store_context_manager_closes(tmp_mneme_dir: Path) -> None:
+    path = tmp_mneme_dir / "semantic.sqlite"
+    with SqliteStore(path) as store:
+        store.upsert_capability(_make_card("a"), _vec(0.1))
+        assert store.get_capability("a") is not None
+    reopened = SqliteStore(path)
+    assert reopened.get_capability("a") is not None
+    reopened.close()
+
+
+def test_sqlite_store_rejects_wrong_shape_on_upsert(tmp_mneme_dir: Path) -> None:
+    store = SqliteStore(tmp_mneme_dir / "semantic.sqlite")
+    bad = np.zeros(100, dtype=np.float32)
+    with pytest.raises(ValueError, match="embedding shape"):
+        store.upsert_capability(_make_card("a"), bad)
+
+
+def test_sqlite_store_rejects_wrong_shape_on_search(tmp_mneme_dir: Path) -> None:
+    store = SqliteStore(tmp_mneme_dir / "semantic.sqlite")
+    bad = np.zeros(100, dtype=np.float32)
+    with pytest.raises(ValueError, match="query shape"):
+        store.search_capabilities(bad)

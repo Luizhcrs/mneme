@@ -4,6 +4,7 @@ from __future__ import annotations
 import sqlite3
 from collections.abc import Iterator
 from pathlib import Path
+from types import TracebackType
 from typing import Generic, TypeVar
 
 import numpy as np
@@ -18,7 +19,13 @@ T = TypeVar("T", bound=BaseModel)
 
 
 class SqliteStore:
-    """SQLite + sqlite-vec store for capability cards and their embeddings."""
+    """SQLite + sqlite-vec store for capability cards and their embeddings.
+
+    Not thread-safe: one instance per process or one per thread. The connection
+    uses ``check_same_thread=True`` (sqlite3 default) and will raise
+    ``ProgrammingError`` if shared across threads. For Phase 1 the hook runs
+    one process per UserPromptSubmit invocation, so this is fine.
+    """
 
     def __init__(self, path: Path) -> None:
         self._path = path
@@ -28,6 +35,17 @@ class SqliteStore:
         self._conn.enable_load_extension(False)
         self._conn.execute("PRAGMA journal_mode=WAL")
         self._init_schema()
+
+    def __enter__(self) -> SqliteStore:
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> None:
+        self.close()
 
     def _init_schema(self) -> None:
         cur = self._conn.cursor()
@@ -70,6 +88,10 @@ class SqliteStore:
         )
         cur.execute("INSERT INTO rowid_to_id(id) VALUES (?)", (card.id,))
         new_rowid = cur.lastrowid
+        if new_rowid is None:
+            raise RuntimeError(
+                "INSERT into rowid_to_id did not return a rowid; database may be corrupt"
+            )
         cur.execute(
             "INSERT INTO capability_vec(rowid, embedding) VALUES (?, ?)",
             (new_rowid, sqlite_vec.serialize_float32(embedding.astype(np.float32).tolist())),
