@@ -11,12 +11,34 @@ from mneme.categories import CATEGORY_DESCRIPTIONS
 from mneme.schema import CATEGORIES, CapabilityCard, Category
 
 
+def _resolve_executable(name: str) -> str | None:
+    """Resolve a CLI name to a full path so subprocess.run finds it on Windows.
+
+    On Windows, ``claude`` is typically installed as ``claude.cmd``; bare
+    ``subprocess.run(["claude", ...])`` fails because Python does not append
+    PATHEXT extensions automatically. We use ``shutil.which`` which honours
+    PATHEXT.
+    """
+    import shutil
+
+    return shutil.which(name) or shutil.which(f"{name}.cmd") or shutil.which(f"{name}.exe")
+
+
 def _run_command(cmd: list[str]) -> str:
-    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=10, check=False)
+    if cmd and not Path(cmd[0]).is_absolute():
+        resolved = _resolve_executable(cmd[0])
+        if resolved is not None:
+            cmd = [resolved, *cmd[1:]]
+    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=15, check=False)
     return proc.stdout
 
 
-_MCP_LINE = re.compile(r"^(?P<name>[a-z][a-z0-9_-]*)\s*\(mcp\):\s*(?P<desc>.+)$")
+_MCP_LINE_LEGACY = re.compile(r"^(?P<name>[a-z][a-z0-9_-]*)\s*\(mcp\):\s*(?P<desc>.+)$")
+_MCP_LINE_MODERN = re.compile(
+    r"^(?P<name>[A-Za-z][A-Za-z0-9_:.\- ]*?):\s+(?P<rest>.+?)$"
+)
+_MCP_STATUS_CONNECTED = re.compile(r"(?:✓\s*Connected|Connected)")
+_MCP_STATUS_NEEDS_AUTH = re.compile(r"Needs authentication")
 _WORD = re.compile(r"[a-z0-9]+")
 
 
@@ -51,39 +73,102 @@ def _guess_category(name: str, description: str) -> Category:
 
 
 def scan_claude_mcp_list() -> list[CapabilityCard]:
+    """Parse `claude mcp list` output across legacy and modern formats.
+
+    Modern format:  ``<name>: <command-or-url> - <status>``
+    Legacy format:  ``<name> (mcp): <description>``
+
+    Cards are emitted with active=True when status is 'Connected', False
+    when 'Needs authentication', and True otherwise (best effort).
+    """
     try:
         out = _run_command(["claude", "mcp", "list"])
     except (FileNotFoundError, subprocess.TimeoutExpired):
         return []
     cards: list[CapabilityCard] = []
     for line in out.splitlines():
-        m = _MCP_LINE.match(line.strip())
-        if not m:
+        stripped = line.strip()
+        if not stripped or stripped.startswith("Checking"):
             continue
-        name = m.group("name")
-        desc = m.group("desc").strip()
+
+        legacy = _MCP_LINE_LEGACY.match(stripped)
+        if legacy:
+            name = legacy.group("name")
+            desc = legacy.group("desc").strip()
+            active = True
+        else:
+            modern = _MCP_LINE_MODERN.match(stripped)
+            if not modern:
+                continue
+            name = modern.group("name").strip()
+            rest = modern.group("rest").strip()
+            connected = bool(_MCP_STATUS_CONNECTED.search(rest))
+            needs_auth = bool(_MCP_STATUS_NEEDS_AUTH.search(rest))
+            active = connected
+            if needs_auth:
+                active = False
+            desc = rest.split(" - ")[0].strip()
+
+        triggers = [name.split(":")[-1].strip(), name]
         cards.append(
             CapabilityCard(
                 id=_safe_id(name),
                 name=name,
                 category=_guess_category(name, desc),
                 action_verb=desc[:80],
-                triggers=[name],
+                triggers=triggers,
                 description=desc,
                 params_required=[],
                 params_optional=[],
                 example=f"MCP: {name}",
                 schema_version="discovered",
                 source="mcp",
+                active=active,
             )
         )
     return cards
 
 
 def scan_plugins(root: Path) -> list[CapabilityCard]:
+    """Discover Claude Code plugins from the installed_plugins.json manifest.
+
+    Newer Claude Code versions write a structured manifest at
+    ``~/.claude/plugins/installed_plugins.json`` listing every installed
+    plugin keyed by ``name@marketplace``. We prefer that manifest when it
+    exists. As a fallback, we scan for legacy plugin.json files directly
+    inside ``~/.claude/plugins/<name>/``.
+    """
     cards: list[CapabilityCard] = []
     if not root.exists():
         return cards
+
+    manifest = root / "installed_plugins.json"
+    if manifest.exists():
+        try:
+            data = json.loads(manifest.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            data = {}
+        plugins = data.get("plugins", {})
+        for full_name, _entries in plugins.items():
+            simple_name = full_name.split("@", 1)[0]
+            cards.append(
+                CapabilityCard(
+                    id=_safe_id(f"plugin_{simple_name}"),
+                    name=simple_name,
+                    category=_guess_category(simple_name, simple_name),
+                    action_verb=f"Claude Code plugin: {simple_name}",
+                    triggers=[simple_name, full_name],
+                    description=f"Installed Claude Code plugin '{full_name}'.",
+                    params_required=[],
+                    params_optional=[],
+                    example=f"Claude Code plugin: {simple_name}",
+                    schema_version="discovered",
+                    source="plugin",
+                    active=True,
+                )
+            )
+        return cards
+
     for plugin_json in root.glob("*/plugin.json"):
         try:
             data = json.loads(plugin_json.read_text(encoding="utf-8"))
@@ -104,6 +189,7 @@ def scan_plugins(root: Path) -> list[CapabilityCard]:
                 example=f"Claude Code plugin: {name}",
                 schema_version="discovered",
                 source="plugin",
+                active=True,
             )
         )
     return cards
@@ -130,6 +216,7 @@ def scan_commands(root: Path) -> list[CapabilityCard]:
                 example=f"Slash command: /{name}",
                 schema_version="discovered",
                 source="command",
+                active=True,
             )
         )
     return cards

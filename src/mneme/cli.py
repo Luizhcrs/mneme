@@ -13,6 +13,7 @@ from mneme import paths
 from mneme.embedder import OllamaEmbedder
 from mneme.loader import load_capabilities, seed_store
 from mneme.retrieve import Retriever
+from mneme.scanner import scan_all
 from mneme.store import SqliteStore
 from mneme.verify import verify_cards
 
@@ -85,6 +86,61 @@ def search(query: str) -> None:
     rendered = result.render()
     typer.echo(rendered if rendered else "<no match>")
     store.close()
+
+
+@app.command()
+def rescan(
+    apply: bool = typer.Option(
+        False, "--apply", help="Write the discovered cards into capabilities.yaml"
+    ),
+) -> None:
+    """Discover MCPs, plugins, slash commands installed locally and surface them.
+
+    Without ``--apply`` this is a dry run: prints the diff against the current
+    capabilities.yaml so you can review before persisting. With ``--apply`` the
+    new cards are merged into capabilities.yaml (existing card ids are NOT
+    overwritten — manual edits win).
+    """
+    yml = paths.capabilities_yaml()
+    if not yml.exists():
+        typer.echo("run `mneme init` first", err=True)
+        raise typer.Exit(1)
+
+    existing = load_capabilities(yml)
+    existing_ids = {c.id for c in existing}
+    discovered = scan_all()
+
+    new_cards = [c for c in discovered if c.id not in existing_ids]
+    typer.echo(f"discovered {len(discovered)} cards, {len(new_cards)} new")
+    if new_cards:
+        typer.echo("")
+        typer.echo("new cards:")
+        for c in new_cards:
+            flag = "active" if c.active else "inactive"
+            typer.echo(f"  + [{c.id}] {c.name} ({c.source}, {c.category}, {flag})")
+    skipped_ids = sorted(existing_ids & {c.id for c in discovered})
+    if skipped_ids:
+        typer.echo("")
+        typer.echo(f"already in registry (left untouched): {len(skipped_ids)}")
+
+    if not apply:
+        typer.echo("")
+        typer.echo("dry run. re-run with --apply to write capabilities.yaml.")
+        return
+
+    merged = list(existing) + new_cards
+    yml.write_text(
+        yaml.safe_dump(
+            [c.model_dump(mode="json") for c in merged],
+            sort_keys=False,
+            allow_unicode=True,
+            default_flow_style=False,
+        ),
+        encoding="utf-8",
+    )
+    typer.echo("")
+    typer.echo(f"wrote {len(merged)} cards to {yml}")
+    typer.echo("run `mneme reindex` to apply to the search index.")
 
 
 @app.command()

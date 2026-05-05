@@ -22,6 +22,42 @@ def test_scan_claude_mcp_list_handles_missing_cli() -> None:
     assert results == []
 
 
+def test_scan_modern_mcp_format_marks_connected_active() -> None:
+    fake = (
+        "Checking MCP server health…\n"
+        "\n"
+        "claude.ai Notion: https://mcp.notion.com/mcp - ! Needs authentication\n"
+        "plugin:telegram:telegram: bun start - ✓ Connected\n"
+        "pencil: C:\\Apps\\pencil.exe - ✓ Connected\n"
+    )
+    with patch("mneme.scanner._run_command", return_value=fake):
+        cards = scan_claude_mcp_list()
+    by_id = {c.id: c for c in cards}
+    assert by_id["claude_ai_notion"].active is False
+    assert by_id["plugin_telegram_telegram"].active is True
+    assert by_id["pencil"].active is True
+
+
+def test_scan_plugins_uses_installed_manifest(tmp_path: Path) -> None:
+    plugins_dir = tmp_path / "plugins"
+    plugins_dir.mkdir()
+    manifest = {
+        "version": 2,
+        "plugins": {
+            "telegram@claude-plugins-official": [{"version": "0.0.6"}],
+            "caveman@caveman": [{"version": "1.0.0"}],
+        },
+    }
+    (plugins_dir / "installed_plugins.json").write_text(json.dumps(manifest), encoding="utf-8")
+    from mneme.scanner import scan_plugins
+
+    cards = scan_plugins(plugins_dir)
+    ids = {c.id for c in cards}
+    assert "plugin_telegram" in ids
+    assert "plugin_caveman" in ids
+    assert all(c.active is True for c in cards)
+
+
 def test_scan_all_combines_sources(tmp_path: Path) -> None:
     plugins_dir = tmp_path / "plugins"
     plugins_dir.mkdir()
