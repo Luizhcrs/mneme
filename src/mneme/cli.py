@@ -7,6 +7,7 @@ from pathlib import Path
 
 import typer
 
+from mneme import insights as _insights_mod
 from mneme import paths
 from mneme.embedder import OllamaEmbedder
 from mneme.loader import seed_store
@@ -82,6 +83,13 @@ def search(query: str) -> None:
     rendered = result.render()
     typer.echo(rendered if rendered else "<no match>")
     store.close()
+
+
+@app.command()
+def insights(window: int = typer.Option(7, "--window", "-w", help="Days to aggregate")) -> None:
+    """Surface patterns from local telemetry: top tools, dead cards, failures, latency."""
+    result = _insights_mod.aggregate(window_days=window)
+    typer.echo(result.render())
 
 
 @app.command()

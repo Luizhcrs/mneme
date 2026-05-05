@@ -16,7 +16,7 @@ A capability card is one entry in `capabilities.yaml`. Each card describes one t
 | `params_optional` | list[string] | Optional parameters by name |
 | `example` | string | One concrete usage example |
 | `schema_version` | string | Tool/MCP version this card describes |
-| `source` | string | One of: `mcp`, `skill`, `plugin`, `command`, `project`, `hermes`, `os`, `manual` |
+| `source` | string | One of: `mcp`, `skill`, `plugin`, `command`, `project`, `service`, `os`, `manual` |
 
 ## Optional fields
 
@@ -38,7 +38,7 @@ A capability card is one entry in `capabilities.yaml`. Each card describes one t
   description: MCP Telegram plugin. Sends text to a chat_id.
   params_required: [chat_id, text]
   params_optional: [parse_mode]
-  example: 'Call: telegram.send(chat_id="503171704", text="deploy ok")'
+  example: 'Call: telegram.send(chat_id="12345678", text="deploy ok")'
   schema_version: "1"
   source: mcp
 ```

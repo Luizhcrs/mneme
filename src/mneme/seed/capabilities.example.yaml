@@ -10,8 +10,8 @@
   params_required: [url]
   params_optional: [selector, viewport, wait_for]
   example: |
-    Task: "tira print da home da carteira-ia"
-    Call: playwright.screenshot(url="https://carteira.ia", selector="#hero")
+    Task: "tira print da home da example-app"
+    Call: playwright.screenshot(url="https://example.com", selector="#hero")
   schema_version: "1.45"
   source: mcp
 
@@ -53,7 +53,7 @@
     Usado para notificar deploy, alerta, status, aviso via Telegram.
   params_required: [chat_id, text]
   params_optional: [parse_mode]
-  example: 'Call: telegram.send(chat_id="503171704", text="deploy ok")'
+  example: 'Call: telegram.send(chat_id="12345678", text="deploy ok")'
   schema_version: "1"
   source: mcp
 

@@ -6,7 +6,7 @@ import sys
 from datetime import UTC, datetime
 from typing import IO
 
-from mneme import paths
+from mneme import paths, telemetry
 from mneme.schema import Workflow
 from mneme.store import JsonlStore
 
@@ -49,7 +49,9 @@ def run_hook(stdin: IO[str] | None = None) -> int:
                 outcome="success",
             )
         )
+        telemetry.record_tool_outcome(tool, "success", exit_code)
     else:
+        telemetry.record_tool_outcome(tool, "failure", exit_code)
         error = str(payload.get("error", ""))[:500]
         with paths.failure_log().open("a", encoding="utf-8") as f:
             f.write(

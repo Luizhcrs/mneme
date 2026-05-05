@@ -1,4 +1,4 @@
-- prompt: "screenshot the carteira-ia homepage"
+- prompt: "screenshot the example-app homepage"
   expected_capability: playwright_screenshot
 - prompt: "navigate the headless browser to example.com"
   expected_capability: playwright_goto
@@ -30,7 +30,7 @@
   expected_capability: telegram_send
 - prompt: "open a GitHub issue for this bug"
   expected_capability: github_create_issue
-- prompt: "create an issue on the carteira-ia repo"
+- prompt: "create an issue on the example-app repo"
   expected_capability: github_create_issue
 - prompt: "abre uma issue no github descrevendo o erro"
   expected_capability: github_create_issue
@@ -76,7 +76,7 @@
   expected_capability: obsidian_search_vault
 - prompt: "look up notes about deployment in Obsidian"
   expected_capability: obsidian_search_vault
-- prompt: "encontra notas no obsidian sobre carteira-ia"
+- prompt: "encontra notas no obsidian sobre example-app"
   expected_capability: obsidian_search_vault
 - prompt: "take a screenshot of my desktop right now"
   expected_capability: pyautogui_screenshot

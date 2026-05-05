@@ -49,7 +49,7 @@ CATEGORIES: frozenset[str] = frozenset(get_args(Category))
 ID_PATTERN_STR = r"^[a-z][a-z0-9_]*$"
 CardId = Annotated[str, Field(pattern=ID_PATTERN_STR)]
 
-Source = Literal["mcp", "skill", "plugin", "command", "project", "hermes", "os", "manual"]
+Source = Literal["mcp", "skill", "plugin", "command", "project", "service", "os", "manual"]
 Outcome = Literal["success", "partial", "failure"]
 
 

@@ -21,7 +21,7 @@ Capability index + retrieval + hooks + bilingual EN+PT-BR + benchmark.
 |------|-------------------|
 | Usar Claude Code com hooks ligados em todo trabalho | 7 dias contínuos |
 | Anotar quando mneme acerta vs erra (logs em `~/.claude/mneme/failures.log` + observações em [[Insight]]) | ≥ 30 prompts reais analisados |
-| Adicionar capability cards próprios do user (Hermes, Telegram MCP, Coolify) | ≥ 5 cards custom |
+| Adicionar capability cards próprios do user (MCPs, plugins, scripts locais) | ≥ 5 cards custom |
 | Medir overhead real (latência adicionada por turno) | < 200 ms p95 em PC com Ollama na CPU |
 
 **Decisões esperadas no fim:** quais Phase 2 items são dor REAL vs vontade abstrata.
@@ -92,7 +92,7 @@ Long-term, alinhado com [[Supermente]]:
 
 ### Tese 4 — Vault que pensa
 
-- mneme como dependência do agente de insight diário do Obsidian. Cron noturno gera insight do vault USANDO mneme pra saber que tem Hermes endpoints, Telegram MCP, embedder local.
+- mneme como dependência do agente de insight diário em vaults locais. Cron noturno gera insight do vault USANDO mneme pra saber que tem endpoints HTTP locais, Telegram MCP, embedder local disponíveis.
 
 ### Tese 1 — Orb agente universal
 

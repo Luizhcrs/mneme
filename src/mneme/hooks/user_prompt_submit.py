@@ -5,10 +5,11 @@ import json
 import os
 import sqlite3
 import sys
+import time
 from pathlib import Path
 from typing import IO
 
-from mneme import paths
+from mneme import paths, telemetry
 from mneme.embedder import OllamaEmbedder
 from mneme.retrieve import Retriever
 from mneme.schema import CapabilityCard, Workflow
@@ -81,6 +82,7 @@ def run_hook(
     if not db_path.exists():
         return 0
 
+    t0 = time.perf_counter()
     try:
         store = SqliteStore(db_path)
         embedder = OllamaEmbedder()
@@ -91,9 +93,31 @@ def run_hook(
         retriever = Retriever(store, embedder, workflow_store=wf_store)
         result = retriever.retrieve(prompt)
     except ConnectionError:
-        return _regex_fallback(prompt, db_path, stdout)
+        rc = _regex_fallback(prompt, db_path, stdout)
+        latency_ms = (time.perf_counter() - t0) * 1000
+        telemetry.record_retrieval(
+            prompt=prompt,
+            top_capability=None,
+            top_score=None,
+            n_returned=0,
+            latency_ms=latency_ms,
+            fallback=True,
+        )
+        return rc
     except (ValueError, RuntimeError, OSError):
         return 0
+
+    latency_ms = (time.perf_counter() - t0) * 1000
+    top_cap = result.capabilities[0][0].id if result.capabilities else None
+    top_score = result.capabilities[0][1] if result.capabilities else None
+    telemetry.record_retrieval(
+        prompt=prompt,
+        top_capability=top_cap,
+        top_score=top_score,
+        n_returned=len(result.capabilities),
+        latency_ms=latency_ms,
+        fallback=False,
+    )
 
     rendered = result.render()
     if rendered:
