@@ -76,6 +76,7 @@ class CapabilityCard(BaseModel):
     success_count: int = Field(default=0, ge=0)
     failure_count: int = Field(default=0, ge=0)
     decay_score: float = Field(default=1.0, ge=0.0, le=1.0)
+    active: bool = True
 
 
 class Workflow(BaseModel):

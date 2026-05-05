@@ -54,10 +54,15 @@ class SqliteStore:
             CREATE TABLE IF NOT EXISTS capabilities (
                 id TEXT PRIMARY KEY,
                 category TEXT NOT NULL,
+                active INTEGER NOT NULL DEFAULT 1,
                 json TEXT NOT NULL
             )
             """
         )
+        cur.execute("PRAGMA table_info(capabilities)")
+        cols = {row[1] for row in cur.fetchall()}
+        if "active" not in cols:
+            cur.execute("ALTER TABLE capabilities ADD COLUMN active INTEGER NOT NULL DEFAULT 1")
         cur.execute(
             f"""
             CREATE VIRTUAL TABLE IF NOT EXISTS capability_vec USING vec0(
@@ -83,8 +88,8 @@ class SqliteStore:
             cur.execute("DELETE FROM rowid_to_id WHERE rowid = ?", (rowid,))
 
         cur.execute(
-            "INSERT INTO capabilities(id, category, json) VALUES (?, ?, ?)",
-            (card.id, card.category, card.model_dump_json()),
+            "INSERT INTO capabilities(id, category, active, json) VALUES (?, ?, ?, ?)",
+            (card.id, card.category, 1 if card.active else 0, card.model_dump_json()),
         )
         cur.execute("INSERT INTO rowid_to_id(id) VALUES (?)", (card.id,))
         new_rowid = cur.lastrowid
@@ -112,6 +117,7 @@ class SqliteStore:
         k: int = 5,
         categories: list[str] | None = None,
         threshold: float = 0.0,
+        active_only: bool = True,
     ) -> list[tuple[CapabilityCard, float]]:
         if query.shape != (EMBED_DIM,):
             raise ValueError(f"query shape {query.shape} != ({EMBED_DIM},)")
@@ -137,6 +143,8 @@ class SqliteStore:
                 continue
             card = self.get_capability(row[0])
             if card is None:
+                continue
+            if active_only and not card.active:
                 continue
             if categories is not None and card.category not in categories:
                 continue

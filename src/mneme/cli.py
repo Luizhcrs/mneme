@@ -6,13 +6,15 @@ import sqlite3
 from pathlib import Path
 
 import typer
+import yaml
 
 from mneme import insights as _insights_mod
 from mneme import paths
 from mneme.embedder import OllamaEmbedder
-from mneme.loader import seed_store
+from mneme.loader import load_capabilities, seed_store
 from mneme.retrieve import Retriever
 from mneme.store import SqliteStore
+from mneme.verify import verify_cards
 
 app = typer.Typer(help="mneme - capability-recall layer for Claude Code", no_args_is_help=True)
 
@@ -83,6 +85,39 @@ def search(query: str) -> None:
     rendered = result.render()
     typer.echo(rendered if rendered else "<no match>")
     store.close()
+
+
+@app.command()
+def verify() -> None:
+    """Audit capability cards against the local machine.
+
+    For each card, check if the thing it describes is actually installed
+    here (MCP registered, plugin present, command file present, OS binary
+    in PATH). Updates the ``active`` flag in capabilities.yaml. Cards that
+    fail the check stop appearing in retrieval injection — preventing the
+    agent from claiming tools it does not actually have.
+
+    Sources that cannot be auto-verified (skill, project, service, manual)
+    are left alone with ``active=True``.
+    """
+    yml = paths.capabilities_yaml()
+    if not yml.exists():
+        typer.echo("run `mneme init` first", err=True)
+        raise typer.Exit(1)
+
+    cards = load_capabilities(yml)
+    updated, result = verify_cards(cards)
+    yml.write_text(
+        yaml.safe_dump(
+            [c.model_dump(mode="json") for c in updated],
+            sort_keys=False,
+            allow_unicode=True,
+            default_flow_style=False,
+        ),
+        encoding="utf-8",
+    )
+    typer.echo(result.render())
+    typer.echo("capabilities.yaml updated. Run `mneme reindex` to apply to the search index.")
 
 
 @app.command()
