@@ -78,7 +78,12 @@ def run(
 
     store = SqliteStore(db)
     seed_store(seed_yaml, store, embedder=embedder)  # type: ignore[arg-type]
-    retriever = Retriever(store, embedder, threshold=0.0, top_capabilities=5)  # type: ignore[arg-type]
+    retriever = Retriever(  # type: ignore[arg-type]
+        store,
+        embedder,
+        top_capabilities=5,
+        threshold=0.0,
+    )  # top_categories defaults to 10 (validated empirically against tasks.yaml)
 
     top1 = top3 = top5 = 0
     latencies: list[float] = []

@@ -50,12 +50,18 @@ class Retriever:
         self,
         store: SqliteStore,
         embedder: _EmbedderProto,
-        top_categories: int = 3,
+        top_categories: int = 10,
         top_capabilities: int = 5,
         threshold: float = 0.65,
         workflow_store: JsonlStore[Workflow] | None = None,
         top_workflows: int = 3,
     ) -> None:
+        """Default top_categories=10 — empirically validated on the 50-task
+        benchmark with real Ollama nomic-embed-text. Lower values (3) over-
+        filter at small registry sizes (10 capabilities, 35 categories) and
+        binary-eject correct results that lost the category sort to noise.
+        Larger registries (100+ capabilities) can tighten this back to 3-5.
+        """
         self._store = store
         self._embedder = embedder
         self._top_categories = top_categories

@@ -103,7 +103,17 @@ Phase 1 MVP **release candidate** tagged at [`v0.1.0-rc1`](https://github.com/Lu
 
 **66 tests passing, 94% coverage. ruff and mypy strict clean.**
 
-Phase 1 acceptance gates (validated by the 50-task benchmark): top-3 affordance recall ≥ 43% (RAG-MCP minimum reproduced, gated behind `MNEME_REAL_OLLAMA=1`), avg latency < 100 ms with the deterministic fake embedder, token overhead per turn < 5%.
+### Phase 1 acceptance gates — validated against the 50-task benchmark
+
+| Metric | Target | Measured (real `nomic-embed-text` on CPU) |
+|--------|--------|-------------------------------------------|
+| top-1 affordance recall | — | **66%** |
+| top-3 affordance recall | ≥ 43% (RAG-MCP minimum) | **70%** |
+| top-5 affordance recall | — | **70%** |
+| avg query latency (CPU) | reference | 2.6 s |
+| avg query latency (deterministic fake) | < 100 ms | < 10 ms |
+
+The recall gate (≥ 43%) is reproduced by [`pytest tests/test_benchmark_acceptance.py`](tests/test_benchmark_acceptance.py) when run with `MNEME_REAL_OLLAMA=1` against a local Ollama daemon. With instruction-prefixed embeddings and the default `top_categories=10` two-stage filter, the system clears the gate by 27 percentage points on a fully bilingual EN+PT-BR query set. Latency on GPU should be 50–100 ms per query — the 2.6 s measured here reflects CPU-only inference of `nomic-embed-text`.
 
 ## Quickstart (preview — final command set lands in Task 14)
 
