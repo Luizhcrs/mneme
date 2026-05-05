@@ -73,7 +73,38 @@ class SqliteStore:
         cur.execute(
             "CREATE TABLE IF NOT EXISTS rowid_to_id (rowid INTEGER PRIMARY KEY, id TEXT NOT NULL)"
         )
+        # FTS5 lexical index for hybrid retrieval. The text column packs
+        # name + description + triggers + action_verb + example so BM25
+        # ranking surfaces cards whose words appear verbatim in the query —
+        # complements the cosine layer which surfaces semantically related
+        # cards even when no word overlaps.
+        cur.execute(
+            """
+            CREATE VIRTUAL TABLE IF NOT EXISTS capability_fts USING fts5(
+                text, tokenize = 'unicode61 remove_diacritics 2'
+            )
+            """
+        )
         self._conn.commit()
+
+    @staticmethod
+    def _fts_text_for(card: CapabilityCard) -> str:
+        """Pack searchable text for the FTS5 lexical index.
+
+        Order matters loosely: BM25 weights all tokens equally but having
+        the name and triggers first front-loads them in the document for
+        readability when debugging.
+        """
+        return " ".join(
+            [
+                card.id,
+                card.name,
+                card.action_verb,
+                " ".join(card.triggers),
+                card.description,
+                card.example,
+            ]
+        )
 
     def upsert_capability(self, card: CapabilityCard, embedding: NDArray[np.float32]) -> None:
         if embedding.shape != (EMBED_DIM,):
@@ -84,6 +115,7 @@ class SqliteStore:
         if row is not None:
             rowid = row[0]
             cur.execute("DELETE FROM capability_vec WHERE rowid = ?", (rowid,))
+            cur.execute("DELETE FROM capability_fts WHERE rowid = ?", (rowid,))
             cur.execute("DELETE FROM capabilities WHERE id = ?", (card.id,))
             cur.execute("DELETE FROM rowid_to_id WHERE rowid = ?", (rowid,))
 
@@ -101,6 +133,10 @@ class SqliteStore:
             "INSERT INTO capability_vec(rowid, embedding) VALUES (?, ?)",
             (new_rowid, sqlite_vec.serialize_float32(embedding.astype(np.float32).tolist())),
         )
+        cur.execute(
+            "INSERT INTO capability_fts(rowid, text) VALUES (?, ?)",
+            (new_rowid, self._fts_text_for(card)),
+        )
         self._conn.commit()
 
     def get_capability(self, card_id: str) -> CapabilityCard | None:
@@ -110,6 +146,64 @@ class SqliteStore:
         if row is None:
             return None
         return CapabilityCard.model_validate_json(row[0])
+
+    def search_capabilities_lexical(
+        self,
+        query_text: str,
+        k: int = 5,
+        active_only: bool = True,
+    ) -> list[tuple[CapabilityCard, float]]:
+        """BM25 lexical search via FTS5. Returns (card, similarity in [0,1])."""
+        if not query_text.strip():
+            return []
+        # Sanitize: keep only word characters and spaces, collapse the rest to
+        # avoid FTS5 syntax errors. Wrap each token in OR so partial matches
+        # surface (FTS5 default is implicit AND, which is too strict).
+        import re as _re
+        tokens = [t for t in _re.findall(r"[\w]+", query_text.lower()) if len(t) > 1]
+        if not tokens:
+            return []
+        match_expr = " OR ".join(tokens)
+        cur = self._conn.cursor()
+        try:
+            cur.execute(
+                """
+                SELECT rowid, bm25(capability_fts) AS score
+                FROM capability_fts
+                WHERE capability_fts MATCH ?
+                ORDER BY score
+                LIMIT ?
+                """,
+                (match_expr, k * 4),
+            )
+            rows = cur.fetchall()
+        except sqlite3.OperationalError:
+            return []
+        if not rows:
+            return []
+
+        # bm25() returns lower=better with values typically in [-50, 0].
+        # Normalize to [0, 1] by min-max within the result set.
+        scores = [float(s) for _, s in rows]
+        s_min, s_max = min(scores), max(scores)
+        spread = s_max - s_min if s_max > s_min else 1.0
+
+        out: list[tuple[CapabilityCard, float]] = []
+        for rowid, raw_score in rows:
+            cur.execute("SELECT id FROM rowid_to_id WHERE rowid = ?", (rowid,))
+            id_row = cur.fetchone()
+            if id_row is None:
+                continue
+            card = self.get_capability(id_row[0])
+            if card is None:
+                continue
+            if active_only and not card.active:
+                continue
+            similarity = 1.0 - ((float(raw_score) - s_min) / spread)
+            out.append((card, similarity))
+            if len(out) >= k:
+                break
+        return out
 
     def search_capabilities(
         self,

@@ -54,7 +54,18 @@ class RetrievalResult:
 
 
 class Retriever:
-    """Two-stage retrieval per AnyTool: category filter then capability search."""
+    """Two-stage retrieval per AnyTool: category filter then capability search.
+
+    Stage 2 is a hybrid retriever: it merges semantic (cosine) ranking with
+    lexical (BM25) ranking via Reciprocal Rank Fusion. RRF (Cormack et al.,
+    2009) is robust to score-scale differences across rankers; each result's
+    fused score is sum(1 / (k_rrf + rank)) over the lists where it appears.
+    The hybrid surfaces cards that match the query semantically AND/OR
+    lexically, which fixes failure modes where a strong PT-BR/EN keyword
+    overlap dominates pure cosine (e.g. 'tira print do site' was beating
+    web-browser cards because pyautogui's seed had stronger PT-BR triggers
+    than the discovered Playwright manifest).
+    """
 
     def __init__(
         self,
@@ -65,12 +76,18 @@ class Retriever:
         threshold: float = 0.65,
         workflow_store: JsonlStore[Workflow] | None = None,
         top_workflows: int = 3,
+        rrf_k: int = 60,
+        lexical_weight: float = 1.0,
     ) -> None:
         """Default top_categories=10 — empirically validated on the 50-task
         benchmark with real Ollama nomic-embed-text. Lower values (3) over-
         filter at small registry sizes (10 capabilities, 35 categories) and
         binary-eject correct results that lost the category sort to noise.
         Larger registries (100+ capabilities) can tighten this back to 3-5.
+
+        ``rrf_k`` is the RRF constant; 60 is the value reported by Cormack et
+        al. ``lexical_weight`` multiplies the BM25 ranker's contribution
+        before fusion (1.0 = equal weight with cosine; 0 = pure semantic).
         """
         self._store = store
         self._embedder = embedder
@@ -79,6 +96,8 @@ class Retriever:
         self._threshold = threshold
         self._workflow_store = workflow_store
         self._top_workflows = top_workflows
+        self._rrf_k = rrf_k
+        self._lexical_weight = lexical_weight
         self._category_vectors = self._build_category_index()
 
     def _build_category_index(self) -> dict[str, NDArray[np.float32]]:
@@ -107,14 +126,50 @@ class Retriever:
         scored.sort(key=lambda t: t[0], reverse=True)
         return [seq for _, seq in scored[: self._top_workflows]]
 
+    def _rrf_fuse(
+        self,
+        semantic: list[tuple[CapabilityCard, float]],
+        lexical: list[tuple[CapabilityCard, float]],
+    ) -> list[tuple[CapabilityCard, float]]:
+        """Reciprocal Rank Fusion: combine two ranked lists into one.
+
+        Each card's RRF score is ``sum(weight_i / (k + rank_i))`` where
+        weight_i is 1.0 for the semantic list and ``self._lexical_weight``
+        for the lexical list. Cards that appear in both lists get a strong
+        boost; cards that only appear in one still surface if their rank
+        is high.
+        """
+        scores: dict[str, float] = {}
+        cards: dict[str, CapabilityCard] = {}
+        for rank, (card, _) in enumerate(semantic):
+            scores[card.id] = scores.get(card.id, 0.0) + 1.0 / (self._rrf_k + rank + 1)
+            cards[card.id] = card
+        for rank, (card, _) in enumerate(lexical):
+            scores[card.id] = scores.get(card.id, 0.0) + self._lexical_weight / (
+                self._rrf_k + rank + 1
+            )
+            cards[card.id] = card
+        ranked = sorted(scores.items(), key=lambda kv: kv[1], reverse=True)
+        return [(cards[cid], score) for cid, score in ranked[: self._top_capabilities]]
+
     def retrieve(self, prompt: str) -> RetrievalResult:
         query_vec = self._embedder.embed(prompt)
         cats = self._top_categories_for(query_vec)
-        caps = self._store.search_capabilities(
+        semantic = self._store.search_capabilities(
             query_vec,
-            k=self._top_capabilities,
+            k=self._top_capabilities * 3,
             categories=cats,
             threshold=self._threshold,
         )
+        lexical = self._store.search_capabilities_lexical(
+            prompt,
+            k=self._top_capabilities * 3,
+        )
+        # Restrict the lexical list to the same category window so the
+        # hierarchy is preserved (lexical alone could surface unrelated
+        # categories whose tokens happen to match).
+        if cats:
+            lexical = [(c, s) for c, s in lexical if c.category in cats]
+        caps = self._rrf_fuse(semantic, lexical)
         workflows = self._retrieve_workflows(query_vec)
         return RetrievalResult(capabilities=caps, categories=cats, workflows=workflows)
