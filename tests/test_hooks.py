@@ -125,3 +125,57 @@ def test_hook_passes_through_on_empty_prompt(seeded_env: Path) -> None:
     rc = run_hook(stdin=stdin, stdout=stdout)
     assert rc == 0
     assert stdout.getvalue() == ""
+
+
+def test_post_tool_use_logs_workflow_on_success(
+    tmp_mneme_dir: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("MNEME_HOME", str(tmp_mneme_dir))
+    from mneme.hooks.post_tool_use import run_hook as post_hook
+
+    payload = {
+        "prompt": "screenshot the homepage",
+        "tool_name": "playwright_screenshot",
+        "tool_args": {"url": "https://example.com"},
+        "exit_code": 0,
+    }
+    stdin = io.StringIO(json.dumps(payload))
+    rc = post_hook(stdin=stdin)
+    assert rc == 0
+
+    procedural = (tmp_mneme_dir / "procedural.jsonl").read_text(encoding="utf-8")
+    assert "playwright_screenshot" in procedural
+    assert "screenshot the homepage" in procedural
+
+
+def test_post_tool_use_logs_failure_to_log_file(
+    tmp_mneme_dir: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("MNEME_HOME", str(tmp_mneme_dir))
+    from mneme.hooks.post_tool_use import run_hook as post_hook
+
+    payload = {
+        "prompt": "screenshot the homepage",
+        "tool_name": "playwright_screenshot",
+        "tool_args": {"url": "https://example.com"},
+        "exit_code": 1,
+        "error": "selector not found",
+    }
+    stdin = io.StringIO(json.dumps(payload))
+    rc = post_hook(stdin=stdin)
+    assert rc == 0
+
+    failures = (tmp_mneme_dir / "failures.log").read_text(encoding="utf-8")
+    assert "playwright_screenshot" in failures
+    assert "selector not found" in failures
+
+
+def test_post_tool_use_passes_through_on_invalid_json(
+    tmp_mneme_dir: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("MNEME_HOME", str(tmp_mneme_dir))
+    from mneme.hooks.post_tool_use import run_hook as post_hook
+
+    stdin = io.StringIO("not valid json {{{")
+    rc = post_hook(stdin=stdin)
+    assert rc == 0
