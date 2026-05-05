@@ -1,0 +1,100 @@
+- prompt: "screenshot the carteira-ia homepage"
+  expected_capability: playwright_screenshot
+- prompt: "navigate the headless browser to example.com"
+  expected_capability: playwright_goto
+- prompt: "scrape product prices from a SPA site"
+  expected_capability: playwright_screenshot
+- prompt: "render a Single Page Application and capture image"
+  expected_capability: playwright_screenshot
+- prompt: "open a webpage in a headless browser"
+  expected_capability: playwright_goto
+- prompt: "read the contents of /etc/hosts"
+  expected_capability: filesystem_read
+- prompt: "open and parse the file at /tmp/data.txt"
+  expected_capability: filesystem_read
+- prompt: "load a configuration file from disk"
+  expected_capability: filesystem_read
+- prompt: "le o arquivo de log do servico"
+  expected_capability: filesystem_read
+- prompt: "abre arquivo texto e mostra conteudo"
+  expected_capability: filesystem_read
+- prompt: "send a Telegram alert that deploy finished"
+  expected_capability: telegram_send
+- prompt: "manda mensagem no telegram avisando o erro"
+  expected_capability: telegram_send
+- prompt: "notify a Telegram chat about new release"
+  expected_capability: telegram_send
+- prompt: "post a message to a Telegram channel"
+  expected_capability: telegram_send
+- prompt: "alerta no telegram quando processo terminar"
+  expected_capability: telegram_send
+- prompt: "open a GitHub issue for this bug"
+  expected_capability: github_create_issue
+- prompt: "create an issue on the carteira-ia repo"
+  expected_capability: github_create_issue
+- prompt: "abre uma issue no github descrevendo o erro"
+  expected_capability: github_create_issue
+- prompt: "file a new GitHub bug report"
+  expected_capability: github_create_issue
+- prompt: "report this problem on GitHub"
+  expected_capability: github_create_issue
+- prompt: "run a local LLM with Ollama"
+  expected_capability: ollama_generate
+- prompt: "generate text using a local model"
+  expected_capability: ollama_generate
+- prompt: "infer with the llama3 model on Ollama"
+  expected_capability: ollama_generate
+- prompt: "use Ollama to summarize this text locally"
+  expected_capability: ollama_generate
+- prompt: "roda um modelo local pra responder pergunta"
+  expected_capability: ollama_generate
+- prompt: "start docker compose services in the project directory"
+  expected_capability: docker_compose_up
+- prompt: "sobe os containers do projeto com docker compose"
+  expected_capability: docker_compose_up
+- prompt: "spin up the dev environment with compose"
+  expected_capability: docker_compose_up
+- prompt: "deploy local services via docker compose"
+  expected_capability: docker_compose_up
+- prompt: "bring up all containers in compose project"
+  expected_capability: docker_compose_up
+- prompt: "run a SQL query against postgres"
+  expected_capability: postgres_query
+- prompt: "executa um SELECT no banco postgres"
+  expected_capability: postgres_query
+- prompt: "query the database for user count"
+  expected_capability: postgres_query
+- prompt: "fetch rows from postgres using SQL"
+  expected_capability: postgres_query
+- prompt: "consulta os dados na tabela do postgres"
+  expected_capability: postgres_query
+- prompt: "search the Obsidian vault for memory notes"
+  expected_capability: obsidian_search_vault
+- prompt: "find notes tagged projeto in the vault"
+  expected_capability: obsidian_search_vault
+- prompt: "busca no vault do obsidian por insight"
+  expected_capability: obsidian_search_vault
+- prompt: "look up notes about deployment in Obsidian"
+  expected_capability: obsidian_search_vault
+- prompt: "encontra notas no obsidian sobre carteira-ia"
+  expected_capability: obsidian_search_vault
+- prompt: "take a screenshot of my desktop right now"
+  expected_capability: pyautogui_screenshot
+- prompt: "captura um print da tela inteira"
+  expected_capability: pyautogui_screenshot
+- prompt: "screenshot the local screen for me"
+  expected_capability: pyautogui_screenshot
+- prompt: "tira print do desktop e salva"
+  expected_capability: pyautogui_screenshot
+- prompt: "capture the current display image"
+  expected_capability: pyautogui_screenshot
+- prompt: "navigate browser to a specific URL"
+  expected_capability: playwright_goto
+- prompt: "load a page in the headless browser"
+  expected_capability: playwright_goto
+- prompt: "abrir uma pagina no navegador headless"
+  expected_capability: playwright_goto
+- prompt: "open URL in browser instance"
+  expected_capability: playwright_goto
+- prompt: "send a chat notification to telegram with status"
+  expected_capability: telegram_send
