@@ -46,6 +46,50 @@ def _safe_id(s: str) -> str:
     return re.sub(r"[^a-z0-9_]", "_", s.lower()).strip("_")
 
 
+def _read_plugin_manifest(
+    entries: list[dict[str, object]], simple_name: str
+) -> tuple[str | None, list[str]]:
+    """Return (description, extra_triggers) by reading the plugin's own manifest.
+
+    Claude Code installs each plugin under
+    ``<installPath>/.claude-plugin/plugin.json`` with a rich `description`
+    written by the plugin author (Microsoft, Anthropic, etc.). Reading it
+    promotes the discovered card from a hollow stub to something the
+    embedding model can actually match against a user query.
+
+    Skill names found alongside the manifest are also harvested as triggers
+    so queries like 'screenshot the homepage' surface the plugin even when
+    the manifest description does not say 'screenshot' verbatim.
+    """
+    for entry in entries:
+        install_path = entry.get("installPath")
+        if not isinstance(install_path, str):
+            continue
+        plugin_dir = Path(install_path)
+        plugin_json = plugin_dir / ".claude-plugin" / "plugin.json"
+        description: str | None = None
+        if plugin_json.exists():
+            try:
+                data = json.loads(plugin_json.read_text(encoding="utf-8"))
+                desc = data.get("description")
+                if isinstance(desc, str) and desc.strip():
+                    description = desc.strip()
+            except (json.JSONDecodeError, OSError):
+                description = None
+
+        triggers: list[str] = []
+        skills_dir = plugin_dir / "skills"
+        if skills_dir.exists():
+            for child in skills_dir.iterdir():
+                if child.is_dir():
+                    triggers.append(child.name)
+
+        if description is not None or triggers:
+            return description, triggers
+
+    return None, []
+
+
 def _guess_category(name: str, description: str) -> Category:
     """Best-effort category for a discovered card via keyword overlap.
 
@@ -149,16 +193,24 @@ def scan_plugins(root: Path) -> list[CapabilityCard]:
         except json.JSONDecodeError:
             data = {}
         plugins = data.get("plugins", {})
-        for full_name, _entries in plugins.items():
+        for full_name, entries in plugins.items():
             simple_name = full_name.split("@", 1)[0]
+            real_description, real_triggers = _read_plugin_manifest(entries, simple_name)
+            description = real_description or f"Installed Claude Code plugin '{full_name}'."
+            triggers = list(dict.fromkeys([simple_name, full_name, *real_triggers]))
+            action_verb = (
+                description.split(".", 1)[0][:80]
+                if real_description
+                else f"Claude Code plugin: {simple_name}"
+            )
             cards.append(
                 CapabilityCard(
                     id=_safe_id(f"plugin_{simple_name}"),
                     name=simple_name,
-                    category=_guess_category(simple_name, simple_name),
-                    action_verb=f"Claude Code plugin: {simple_name}",
-                    triggers=[simple_name, full_name],
-                    description=f"Installed Claude Code plugin '{full_name}'.",
+                    category=_guess_category(simple_name, description),
+                    action_verb=action_verb,
+                    triggers=triggers,
+                    description=description,
                     params_required=[],
                     params_optional=[],
                     example=f"Claude Code plugin: {simple_name}",

@@ -21,16 +21,31 @@ class RetrievalResult:
     def render(self) -> str:
         """Render injection block. Caller MUST place this at the START of the prompt
         (Lost in the Middle, TACL 2024 — middle-of-context content gets ignored).
+
+        The block opens with an explicit behavioral directive: do not claim a
+        limitation when one of the listed capabilities matches the task. The
+        agent is biased toward fallbacks (curl, regex, manual parsing) when
+        unsure; a passive list of names is not enough — the directive raises
+        the bar to "use one of these or justify why none fit".
         """
         if not self.capabilities and not self.workflows:
             return ""
-        lines = ["<capabilities-available>"]
+        lines = [
+            "<capabilities-available>",
+            "INSTRUCTION: Before responding that you cannot do something, scan",
+            "this list. If any entry matches the user's task, you HAVE that tool",
+            "and MUST attempt it before falling back to manual workarounds (curl,",
+            "regex, screenshots-by-hand, etc.). Stating a limitation that the list",
+            "contradicts is a hallucination — do not do it.",
+            "",
+        ]
         for card, score in self.capabilities:
             lines.append(
                 f"- [{card.id}] {card.name} ({card.category}, score={score:.2f})\n"
                 f"  verb: {card.action_verb}\n"
-                f"  params_required: {card.params_required}\n"
-                f"  example: {card.example.strip()}"
+                f"  description: {card.description.strip()[:200]}\n"
+                f"  triggers: {card.triggers[:8]}\n"
+                f"  example: {card.example.strip()[:140]}"
             )
         for seq in self.workflows:
             lines.append(f"- workflow that worked before: {' -> '.join(seq)}")
