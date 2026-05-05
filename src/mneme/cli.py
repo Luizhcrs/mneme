@@ -233,6 +233,162 @@ def insights(window: int = typer.Option(7, "--window", "-w", help="Days to aggre
 
 
 @app.command()
+def serve() -> None:
+    """Run mneme as an MCP stdio server (Claude Code, Codex, Cursor, etc.).
+
+    Wire into a client by adding to its MCP config:
+        {"mcpServers": {"mneme": {"command": "mneme", "args": ["serve"]}}}
+    """
+    from mneme.mcp_server import main as mcp_main
+
+    mcp_main()
+
+
+@app.command()
+def go() -> None:
+    """One-shot setup: detect agent CLIs on this machine and wire mneme.
+
+    Walks through:
+      1. Init the home directory and copy seed capabilities.
+      2. Discover installed plugins/MCPs via the scanner.
+      3. Reindex the semantic store with Ollama (must be running).
+      4. Detect Claude Code / Codex / Cursor / Continue.dev configs and
+         offer to wire mneme as either UserPromptSubmit hook (Claude Code)
+         or MCP server (any client). Prints exact JSON snippets to paste
+         when auto-wire is declined.
+
+    Run after `pip install mneme`. Idempotent.
+    """
+    import json
+    import sys
+
+    home = paths.home()
+    home.mkdir(parents=True, exist_ok=True)
+
+    yml = paths.capabilities_yaml()
+    if not yml.exists():
+        shutil.copy(SEED_SOURCE, yml)
+        typer.echo(f"[init] created {yml}")
+    else:
+        typer.echo(f"[init] capabilities.yaml already exists: {yml}")
+
+    typer.echo("[scan] running rescan to discover installed plugins/MCPs...")
+    discovered = scan_all()
+    if discovered:
+        typer.echo(f"[scan] found {len(discovered)} discoverable cards")
+        existing_ids: set[str] = set()
+        if yml.exists():
+            try:
+                existing = load_capabilities(yml)
+                existing_ids = {c.id for c in existing}
+            except (ValueError, OSError):
+                existing_ids = set()
+        new_cards = [c for c in discovered if c.id not in existing_ids]
+        if new_cards:
+            merged = list(load_capabilities(yml)) if yml.exists() else []
+            merged.extend(new_cards)
+            yml.write_text(
+                yaml.safe_dump(
+                    [c.model_dump(mode="json") for c in merged],
+                    sort_keys=False,
+                    allow_unicode=True,
+                    default_flow_style=False,
+                ),
+                encoding="utf-8",
+            )
+            typer.echo(f"[scan] added {len(new_cards)} new cards to {yml}")
+
+    typer.echo("[index] rebuilding semantic.sqlite...")
+    import contextlib
+
+    db = paths.semantic_db()
+    if db.exists():
+        with contextlib.suppress(OSError):
+            db.unlink()
+    try:
+        store = SqliteStore(db)
+        n = seed_store(yml, store)
+        store.close()
+        typer.echo(f"[index] indexed {n} capabilities")
+    except (ConnectionError, RuntimeError) as exc:
+        typer.echo(f"[index] failed: {exc}", err=True)
+        typer.echo("[index] is Ollama running with `nomic-embed-text` pulled?", err=True)
+        raise typer.Exit(1) from exc
+
+    cc_settings = Path.home() / ".claude" / "settings.json"
+    detections: list[tuple[str, Path | None, str]] = [
+        ("Claude Code", cc_settings if cc_settings.exists() else None, "hook + MCP"),
+        ("Codex (~/.codex)", Path.home() / ".codex", "MCP only"),
+        ("Cursor (%APPDATA%/Cursor)", Path.home() / "AppData" / "Roaming" / "Cursor", "MCP only"),
+        ("Continue.dev (~/.continue)", Path.home() / ".continue", "MCP only"),
+    ]
+    typer.echo()
+    typer.echo("[detect] looking for installed agent CLIs...")
+    found_any = False
+    for label, path, capability in detections:
+        present = path is not None and path.exists()
+        marker = "[OK]" if present else "[--]"
+        typer.echo(f"  {marker} {label} ({capability})")
+        if present:
+            found_any = True
+    typer.echo()
+
+    mcp_snippet = json.dumps(
+        {
+            "mcpServers": {
+                "mneme": {
+                    "command": sys.executable,
+                    "args": ["-m", "mneme.mcp_server"],
+                }
+            }
+        },
+        indent=2,
+    )
+    hook_snippet = json.dumps(
+        {
+            "hooks": {
+                "UserPromptSubmit": [
+                    {
+                        "hooks": [
+                            {
+                                "type": "command",
+                                "command": f"{sys.executable} -m mneme.hooks.user_prompt_submit",
+                                "timeout": 8,
+                            }
+                        ]
+                    }
+                ],
+                "PostToolUse": [
+                    {
+                        "hooks": [
+                            {
+                                "type": "command",
+                                "command": f"{sys.executable} -m mneme.hooks.post_tool_use",
+                                "timeout": 5,
+                            }
+                        ]
+                    }
+                ],
+            }
+        },
+        indent=2,
+    )
+
+    typer.echo("To wire mneme into Claude Code (proactive injection on every prompt),")
+    typer.echo("merge into ~/.claude/settings.json:")
+    typer.echo(hook_snippet)
+    typer.echo()
+    typer.echo("To expose mneme as an MCP tool callable from any compatible client,")
+    typer.echo("merge into the client's MCP config (Claude Code: ~/.claude/settings.json,")
+    typer.echo("Codex: ~/.codex/config.toml as [mcp_servers.mneme], Cursor/Continue: their")
+    typer.echo("respective settings):")
+    typer.echo(mcp_snippet)
+    typer.echo()
+    if not found_any:
+        typer.echo("[detect] no known agent CLIs found. mneme is still usable as a library.")
+
+
+@app.command()
 def stats() -> None:
     """Show counts of capabilities and procedural workflows."""
     db = paths.semantic_db()

@@ -25,22 +25,22 @@ scenarios where the right tool is non-obvious without explicit prompting.
 from __future__ import annotations
 
 import argparse
-import json
 import re
+import shutil
+import subprocess
 import time
 from dataclasses import dataclass
 from pathlib import Path
 
 import httpx
-import yaml
 
-from mneme.embedder import EMBED_DIM, OllamaEmbedder
+from mneme.embedder import OllamaEmbedder
 from mneme.loader import seed_store
 from mneme.retrieve import Retriever
 from mneme.store import SqliteStore
 
 OLLAMA_HOST = "http://localhost:11434"
-JUDGE_MODEL = "qwen2.5:3b"
+DEFAULT_OLLAMA_MODEL = "qwen2.5:3b"
 
 
 @dataclass
@@ -194,9 +194,9 @@ SCENARIOS: list[Scenario] = [
 ]
 
 
-def call_llm(prompt: str, *, timeout: float = 90.0) -> str:
+def call_llm_ollama(prompt: str, model: str, *, timeout: float = 90.0) -> str:
     payload = {
-        "model": JUDGE_MODEL,
+        "model": model,
         "prompt": prompt,
         "stream": False,
         "options": {"temperature": 0.1, "num_predict": 220},
@@ -204,6 +204,82 @@ def call_llm(prompt: str, *, timeout: float = 90.0) -> str:
     r = httpx.post(f"{OLLAMA_HOST}/api/generate", json=payload, timeout=timeout)
     r.raise_for_status()
     return str(r.json().get("response", ""))
+
+
+def _resolve_claude_cli() -> str | None:
+    """Find the Claude Code binary, honouring Windows PATHEXT (.cmd)."""
+    return (
+        shutil.which("claude")
+        or shutil.which("claude.cmd")
+        or shutil.which("claude.exe")
+    )
+
+
+_CLAUDE_CLEAN_SYSTEM_PROMPT = (
+    "You are a coding assistant. Answer the user's request directly with a "
+    "concrete approach (3-5 sentences) including specific tool calls or "
+    "commands. Do not ask clarifying questions. Do not refer to memory, "
+    "auto-pilot, or any project-specific context. Treat the prompt as a "
+    "self-contained task."
+)
+
+
+def call_llm_claude(prompt: str, *, timeout: float = 180.0) -> str:
+    """Run Claude Code CLI cleanly via stdin + system-prompt override.
+
+    The combination ``--system-prompt <override> --tools ""`` cuts the user's
+    CLAUDE.md auto-memory and tool surface out of the call, leaving the
+    underlying Anthropic model to respond to the prompt directly. This is
+    important for the A/B: without these flags, Claude Code reads the user's
+    global CLAUDE.md, which on this developer's machine triggers an
+    'auto-pilot session init' interpretation that ignores the actual task.
+
+    Authentication still flows through the user's OAuth login (no
+    ANTHROPIC_API_KEY required) — only the bare flag forces an API-key
+    handshake, and we are not using bare.
+
+    The prompt is delivered via stdin to avoid Windows command-line length
+    limits on long compound prompts.
+    """
+    import os
+    import tempfile
+
+    binary = _resolve_claude_cli()
+    if binary is None:
+        raise RuntimeError(
+            "claude CLI not found in PATH; install Claude Code or use --judge ollama"
+        )
+    with tempfile.TemporaryDirectory() as empty_home:
+        env = {**os.environ, "MNEME_HOME": empty_home, "MNEME_TELEMETRY": "0"}
+        proc = subprocess.run(
+            [
+                binary,
+                "--print",
+                "--system-prompt",
+                _CLAUDE_CLEAN_SYSTEM_PROMPT,
+                "--tools",
+                "",
+            ],
+            input=prompt,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            check=False,
+            encoding="utf-8",
+            env=env,
+        )
+    if proc.returncode != 0:
+        raise RuntimeError(
+            f"claude CLI exit {proc.returncode}: {proc.stderr.strip()[:200]}"
+        )
+    # Strip session-end hook noise that may follow the model output.
+    out = proc.stdout
+    cutoff_markers = ("SessionEnd hook", "[claude-mem]", "Stop hook")
+    for marker in cutoff_markers:
+        idx = out.find(marker)
+        if idx > 0:
+            out = out[:idx]
+    return out.rstrip()
 
 
 def score(
@@ -256,7 +332,25 @@ def build_control_prompt(user_request: str) -> str:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--limit", type=int, default=len(SCENARIOS))
+    parser.add_argument(
+        "--judge",
+        choices=("ollama", "claude"),
+        default="ollama",
+        help="Which LLM evaluates each prompt. 'claude' uses the Claude Code CLI "
+        "in --bare --print mode (no hooks, no plugins) and is much stronger in "
+        "PT-BR than the small local Ollama model.",
+    )
+    parser.add_argument(
+        "--ollama-model",
+        default=DEFAULT_OLLAMA_MODEL,
+        help="Ollama model name when --judge=ollama (default: qwen2.5:3b).",
+    )
     args = parser.parse_args()
+
+    def call(prompt: str) -> str:
+        if args.judge == "claude":
+            return call_llm_claude(prompt)
+        return call_llm_ollama(prompt, args.ollama_model)
 
     here = Path(__file__).parent
     seed = here.parent.parent / "src" / "mneme" / "seed" / "capabilities.example.yaml"
@@ -271,7 +365,7 @@ def main() -> None:
     totals_a = {"expected_hit": 0, "wrong_fallback": 0, "cant_phrase": 0, "total": 0}
     totals_b = {"expected_hit": 0, "wrong_fallback": 0, "cant_phrase": 0, "total": 0}
 
-    rows: list[tuple[Scenario, str, dict[str, int], dict[str, int]]] = []
+    rows: list[tuple[Scenario, dict[str, int], dict[str, int]]] = []
 
     for sc in SCENARIOS[: args.limit]:
         result = retriever.retrieve(sc.prompt)
@@ -280,22 +374,23 @@ def main() -> None:
         prompt_b = build_with_mneme_prompt(injection or "(no relevant capabilities)", sc.prompt)
 
         t0 = time.perf_counter()
-        resp_a = call_llm(prompt_a)
-        resp_b = call_llm(prompt_b)
-        elapsed = time.perf_counter() - t0
+        resp_a = call(prompt_a)
+        resp_b = call(prompt_b)
+        elapsed_s = time.perf_counter() - t0
+        del elapsed_s  # measured for future logging; not reported per-row
 
         sa = score(resp_a, sc)
         sb = score(resp_b, sc)
         for k in totals_a:
             totals_a[k] += sa[k]
             totals_b[k] += sb[k]
-        rows.append((sc, f"{elapsed:.1f}s", sa, sb))
+        rows.append((sc, sa, sb))
 
     print("=" * 80)
-    print("A/B TEST RESULTS — control vs mneme")
+    print(f"A/B TEST RESULTS — control vs mneme (judge: {args.judge})")
     print("=" * 80)
     print()
-    for sc, elapsed, sa, sb in rows:
+    for sc, sa, sb in rows:
         prompt_short = sc.prompt[:60].replace("\n", " ")
         delta = sb["total"] - sa["total"]
         sign = "+" if delta > 0 else ("=" if delta == 0 else "-")
