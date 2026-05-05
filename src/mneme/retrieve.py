@@ -7,6 +7,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from mneme.categories import CATEGORY_DESCRIPTIONS
+from mneme.feedback import FeedbackStore
 from mneme.schema import CapabilityCard, Workflow
 from mneme.store import JsonlStore, SqliteStore
 from mneme.types import EmbedderProto
@@ -78,6 +79,8 @@ class Retriever:
         top_workflows: int = 3,
         rrf_k: int = 60,
         lexical_weight: float = 1.0,
+        feedback_store: FeedbackStore | None = None,
+        feedback_threshold: float = 0.80,
     ) -> None:
         """Default top_categories=10 — empirically validated on the 50-task
         benchmark with real Ollama nomic-embed-text. Lower values (3) over-
@@ -98,6 +101,8 @@ class Retriever:
         self._top_workflows = top_workflows
         self._rrf_k = rrf_k
         self._lexical_weight = lexical_weight
+        self._feedback_store = feedback_store
+        self._feedback_threshold = feedback_threshold
         self._category_vectors = self._build_category_index()
 
     def _build_category_index(self) -> dict[str, NDArray[np.float32]]:
@@ -152,6 +157,48 @@ class Retriever:
         ranked = sorted(scores.items(), key=lambda kv: kv[1], reverse=True)
         return [(cards[cid], score) for cid, score in ranked[: self._top_capabilities]]
 
+    def _feedback_boost(
+        self,
+        query_vec: NDArray[np.float32],
+        merged: list[tuple[CapabilityCard, float]],
+    ) -> list[tuple[CapabilityCard, float]]:
+        """Promote a corrected tool when the current query matches a logged one.
+
+        For each user correction in the feedback log, compute cosine between
+        the current query and the recorded query. If any recorded query is
+        within ``feedback_threshold`` (default 0.80, treated as a near-
+        duplicate intent), find the corresponding card in the merged result
+        list and lift it to rank 1 with a score equal to the best-fused
+        score plus a small epsilon. Cards not in the merged list are
+        ignored — feedback boosts existing candidates, it does not invent
+        new retrievals (which would require a fresh embed of the corrected
+        card on every turn).
+        """
+        if self._feedback_store is None or not merged:
+            return merged
+        best_match: tuple[float, str] | None = None
+        for entry in self._feedback_store.iter_all():
+            sim = float(np.dot(query_vec, entry.embedding))
+            if sim < self._feedback_threshold:
+                continue
+            if best_match is None or sim > best_match[0]:
+                best_match = (sim, entry.tool_id)
+        if best_match is None:
+            return merged
+
+        target_id = best_match[1]
+        promoted_index: int | None = None
+        for i, (card, _) in enumerate(merged):
+            if card.id == target_id:
+                promoted_index = i
+                break
+        if promoted_index is None or promoted_index == 0:
+            return merged
+        promoted_card, _ = merged[promoted_index]
+        new_top_score = merged[0][1] + 1e-3
+        rest = [pair for i, pair in enumerate(merged) if i != promoted_index]
+        return [(promoted_card, new_top_score), *rest][: self._top_capabilities]
+
     def retrieve(self, prompt: str) -> RetrievalResult:
         query_vec = self._embedder.embed(prompt)
         cats = self._top_categories_for(query_vec)
@@ -165,11 +212,9 @@ class Retriever:
             prompt,
             k=self._top_capabilities * 3,
         )
-        # Restrict the lexical list to the same category window so the
-        # hierarchy is preserved (lexical alone could surface unrelated
-        # categories whose tokens happen to match).
         if cats:
             lexical = [(c, s) for c, s in lexical if c.category in cats]
         caps = self._rrf_fuse(semantic, lexical)
+        caps = self._feedback_boost(query_vec, caps)
         workflows = self._retrieve_workflows(query_vec)
         return RetrievalResult(capabilities=caps, categories=cats, workflows=workflows)

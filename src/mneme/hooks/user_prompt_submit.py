@@ -11,6 +11,7 @@ from typing import IO
 
 from mneme import paths, telemetry
 from mneme.embedder import OllamaEmbedder
+from mneme.feedback import FeedbackStore
 from mneme.retrieve import Retriever
 from mneme.schema import CapabilityCard, Workflow
 from mneme.store import JsonlStore, SqliteStore
@@ -90,7 +91,11 @@ def run_hook(
         wf_store = (
             JsonlStore[Workflow](wf_path, Workflow) if wf_path.exists() else None
         )
-        retriever = Retriever(store, embedder, workflow_store=wf_store)
+        fb_path = paths.feedback_jsonl()
+        fb_store = FeedbackStore(fb_path) if fb_path.exists() else None
+        retriever = Retriever(
+            store, embedder, workflow_store=wf_store, feedback_store=fb_store
+        )
         result = retriever.retrieve(prompt)
     except ConnectionError:
         rc = _regex_fallback(prompt, db_path, stdout)

@@ -11,6 +11,7 @@ import yaml
 from mneme import insights as _insights_mod
 from mneme import paths
 from mneme.embedder import OllamaEmbedder
+from mneme.feedback import FeedbackStore
 from mneme.loader import load_capabilities, seed_store
 from mneme.retrieve import Retriever
 from mneme.scanner import scan_all
@@ -81,11 +82,40 @@ def search(query: str) -> None:
         raise typer.Exit(1)
     store = SqliteStore(db)
     embedder = OllamaEmbedder()
-    retriever = Retriever(store, embedder, threshold=0.0)
+    fb_path = paths.feedback_jsonl()
+    fb_store = FeedbackStore(fb_path) if fb_path.exists() else None
+    retriever = Retriever(store, embedder, threshold=0.0, feedback_store=fb_store)
     result = retriever.retrieve(query)
     rendered = result.render()
     typer.echo(rendered if rendered else "<no match>")
     store.close()
+
+
+@app.command()
+def correct(query: str, tool_id: str) -> None:
+    """Record a correction: 'for query X, the right tool was Y'.
+
+    Future queries semantically similar to X will surface tool Y at the
+    top of the retrieval list. This is the active feedback loop — mneme
+    learns from your corrections without retraining or re-embedding the
+    whole registry.
+    """
+    db = paths.semantic_db()
+    if not db.exists():
+        typer.echo("run `mneme reindex` first", err=True)
+        raise typer.Exit(1)
+    store = SqliteStore(db)
+    if store.get_capability(tool_id) is None:
+        typer.echo(f"unknown tool_id: {tool_id!r}. Run `mneme list` to see ids.", err=True)
+        store.close()
+        raise typer.Exit(1)
+    store.close()
+
+    embedder = OllamaEmbedder()
+    vec = embedder.embed(query)
+    fb_store = FeedbackStore(paths.feedback_jsonl())
+    fb_store.append(query=query, tool_id=tool_id, embedding=vec)
+    typer.echo(f"recorded: {query!r} -> {tool_id}")
 
 
 @app.command()

@@ -30,3 +30,7 @@ def reflections_jsonl() -> Path:
 
 def failure_log() -> Path:
     return home() / "failures.log"
+
+
+def feedback_jsonl() -> Path:
+    return home() / "feedback.jsonl"
