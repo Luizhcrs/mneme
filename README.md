@@ -9,7 +9,7 @@
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License: MIT" /></a>
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python 3.11+" /></a>
-  <a href="https://github.com/Luizhcrs/mneme/releases/tag/v0.1.0-rc1"><img src="https://img.shields.io/badge/release-v0.1.0--rc1-orange.svg" alt="Release" /></a>
+  <a href="https://github.com/Luizhcrs/mneme/releases/tag/v1.0.0"><img src="https://img.shields.io/badge/release-v1.0.0-green.svg" alt="Release" /></a>
 </p>
 
 <p align="center">
@@ -46,21 +46,17 @@ mneme keeps a local, semantic index of every capability your agent has access to
 ```bash
 pip install git+https://github.com/Luizhcrs/mneme.git
 ollama pull nomic-embed-text
-mneme init && mneme reindex
+mneme go
 ```
 
-Add two lines to `~/.claude/settings.json`:
+`mneme go` does the full setup once — creates the home directory, scans your installed plugins/MCPs/commands, embeds the registry, detects which agent CLIs you have (Claude Code, Codex, Cursor, Continue.dev), and prints the exact JSON snippet to wire mneme into each one.
 
-```json
-{
-  "hooks": {
-    "UserPromptSubmit": "python -m mneme.hooks.user_prompt_submit",
-    "PostToolUse": "python -m mneme.hooks.post_tool_use"
-  }
-}
-```
+Two deployment modes:
 
-Done. Every prompt your agent receives now starts with a `<capabilities-available>` block listing the tools that match the task — by semantic similarity, in EN or PT-BR, with confidence scores.
+- **Claude Code (proactive):** `UserPromptSubmit` + `PostToolUse` hooks inject relevant capabilities into every turn automatically.
+- **Codex / Cursor / Continue.dev / any MCP client (reactive):** mneme exposes `recall(query)`, `record_correction(query, tool_id)`, and `list_capabilities()` as MCP tools the agent calls on demand.
+
+Same hybrid BM25+vector ranking, same feedback loop, same registry, same bilingual EN+PT-BR scope across both modes.
 
 ## Does it actually work?
 
