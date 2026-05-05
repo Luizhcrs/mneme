@@ -84,19 +84,26 @@ mneme is a small, local, MIT-licensed library that fixes this without any cloud 
 
 ## Status
 
-Phase 1 MVP is **in development**. Tracker: [`docs/superpowers/plans/2026-05-04-mneme-phase1.md`](docs/superpowers/plans/2026-05-04-mneme-phase1.md).
+Phase 1 MVP **release candidate** tagged at [`v0.1.0-rc1`](https://github.com/Luizhcrs/mneme/releases/tag/v0.1.0-rc1). Tracker: [`docs/superpowers/plans/2026-05-04-mneme-phase1.md`](docs/superpowers/plans/2026-05-04-mneme-phase1.md).
 
-| Task | Status |
-|------|--------|
-| 1. Repo bootstrap | done |
-| 2. Pydantic schema (35 categories) | done |
-| 3. Embedder (Ollama + instruction prefix) | done |
-| 4. Store (sqlite-vec + JSONL) | in progress |
-| 5-8. Loader, retrieval, hook, integration | upcoming |
-| 9-12. Scanner, normalizer, procedural memory | upcoming |
-| 13-18. Robustness, CLI, benchmark, docs, CI, public release | upcoming |
+| Layer | Status | Tests |
+|-------|--------|-------|
+| Schema (35 categories, pydantic v2) | done | 11 |
+| Embedder (Ollama + instruction prefix, fail-loud) | done | 6 |
+| Store (sqlite-vec + JSONL, context manager) | done | 9 |
+| Loader (YAML + 10 seed cards) | done | 6 |
+| Retrieval (two-stage AnyTool, procedural workflows) | done | 6 |
+| Hooks (UserPromptSubmit, PostToolUse, regex fallback) | done | 10 |
+| Scanner (claude mcp list, plugins, commands) | done | 3 |
+| Normalizer (rule-based EasyTool format) | done | 4 |
+| CLI (init, reindex, list, search, stats) | done | 8 |
+| Benchmark (50-task dataset, acceptance gates) | done | 3 |
+| Bilingual docs (EN + PT-BR) | done | — |
+| GitHub Actions CI (Python 3.11 + 3.12) | done | — |
 
-Phase 1 acceptance gates (validated by the 50-task benchmark in Task 16): top-3 affordance recall ≥ 43% (RAG-MCP minimum reproduced), hook latency p95 < 100 ms, token overhead per turn < 5%.
+**66 tests passing, 94% coverage. ruff and mypy strict clean.**
+
+Phase 1 acceptance gates (validated by the 50-task benchmark): top-3 affordance recall ≥ 43% (RAG-MCP minimum reproduced, gated behind `MNEME_REAL_OLLAMA=1`), avg latency < 100 ms with the deterministic fake embedder, token overhead per turn < 5%.
 
 ## Quickstart (preview — final command set lands in Task 14)
 
