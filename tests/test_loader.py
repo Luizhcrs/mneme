@@ -97,16 +97,23 @@ def test_seed_store_inserts_all(tmp_mneme_dir: Path) -> None:
         encoding="utf-8",
     )
 
-    # Use a fake embedder so the test does not require Ollama running.
+    from numpy.typing import NDArray
 
     class _FakeEmbedder:
-        def embed(self, text: str) -> np.ndarray:
+        def embed(self, text: str) -> NDArray[np.float32]:
             rng = np.random.default_rng(abs(hash(text)) % (2**32))
             v = rng.standard_normal(EMBED_DIM).astype(np.float32)
             return v / np.linalg.norm(v)
 
     store = SqliteStore(tmp_mneme_dir / "s.sqlite")
-    n = seed_store(yml, store, embedder=_FakeEmbedder())  # type: ignore[arg-type]
+    n = seed_store(yml, store, embedder=_FakeEmbedder())
     assert n == 1
     assert store.get_capability("a") is not None
     store.close()
+
+
+def test_load_capabilities_rejects_non_list_root(tmp_path: Path) -> None:
+    yml = tmp_path / "bad.yaml"
+    yml.write_text("not_a_list: true\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="must be a list"):
+        load_capabilities(yml)

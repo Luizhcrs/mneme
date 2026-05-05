@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 import numpy as np
 import yaml
@@ -13,17 +13,22 @@ from mneme.schema import CapabilityCard
 from mneme.store import SqliteStore
 
 
+@runtime_checkable
 class _EmbedderProto(Protocol):
     def embed(self, text: str) -> NDArray[np.float32]: ...
 
 
 def load_capabilities(path: Path) -> list[CapabilityCard]:
     raw = yaml.safe_load(path.read_text(encoding="utf-8")) or []
+    if not isinstance(raw, list):
+        raise ValueError(
+            f"YAML root must be a list of capability cards, got {type(raw).__name__} in {path}"
+        )
     cards = [CapabilityCard.model_validate(item) for item in raw]
     seen: set[str] = set()
     for card in cards:
         if card.id in seen:
-            raise ValueError(f"duplicate capability id: {card.id}")
+            raise ValueError(f"duplicate capability id '{card.id}' in {path}")
         seen.add(card.id)
     return cards
 

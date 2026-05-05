@@ -30,7 +30,7 @@
   name: Filesystem Read
   category: filesystem
   action_verb: "reads file contents from disk"
-  triggers: [read file, le arquivo, open file]
+  triggers: [read file, lê arquivo, ler arquivo, open file]
   description: Standard filesystem read with UTF-8 default encoding.
   params_required: [path]
   params_optional: [encoding]
