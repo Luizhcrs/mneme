@@ -152,15 +152,23 @@ class SqliteStore:
         query_text: str,
         k: int = 5,
         active_only: bool = True,
+        min_score: float = -2.0,
     ) -> list[tuple[CapabilityCard, float]]:
-        """BM25 lexical search via FTS5. Returns (card, similarity in [0,1])."""
+        """BM25 lexical search via FTS5. Returns (card, similarity in [0,1]).
+
+        ``min_score`` is the maximum (worst, since BM25 is negative) raw bm25
+        score we accept. The default of -2.0 rejects matches where the query
+        has only weak token overlap with the card text — important to keep
+        unrelated queries (e.g. 'compute factorial') from surfacing arbitrary
+        cards via single-token coincidences.
+        """
         if not query_text.strip():
             return []
         # Sanitize: keep only word characters and spaces, collapse the rest to
         # avoid FTS5 syntax errors. Wrap each token in OR so partial matches
         # surface (FTS5 default is implicit AND, which is too strict).
         import re as _re
-        tokens = [t for t in _re.findall(r"[\w]+", query_text.lower()) if len(t) > 1]
+        tokens = [t for t in _re.findall(r"[\w]+", query_text.lower()) if len(t) > 2]
         if not tokens:
             return []
         match_expr = " OR ".join(tokens)
@@ -179,6 +187,13 @@ class SqliteStore:
             rows = cur.fetchall()
         except sqlite3.OperationalError:
             return []
+        if not rows:
+            return []
+
+        # Pre-filter rows whose absolute BM25 score is too weak to be a
+        # meaningful match — guards against single-token coincidences that
+        # would otherwise inflate no-match queries' candidate lists.
+        rows = [(rid, s) for rid, s in rows if float(s) <= min_score]
         if not rows:
             return []
 

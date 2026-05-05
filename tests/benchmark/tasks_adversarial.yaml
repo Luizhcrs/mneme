@@ -1,0 +1,226 @@
+# 100 adversarial tasks — designed to stress-test hybrid retrieval where
+# keyword overlap and semantic intent disagree. Half should resolve to a
+# capability in the seed registry; half are "no match" probes that exercise
+# the threshold and ensure mneme does not hallucinate tools.
+
+# === group A: keyword vs semantic conflicts (25) ===
+# Pyautogui has the PT-BR trigger "tira print"; Playwright has "site/web".
+# A correct retriever must use the modifier ("site"/"desktop") to disambiguate.
+
+- prompt: "tira print do site da empresa"
+  expected_capability: playwright_screenshot
+- prompt: "tira print da tela do meu app"
+  expected_capability: pyautogui_screenshot
+- prompt: "screenshot da homepage do produto"
+  expected_capability: playwright_screenshot
+- prompt: "screenshot do desktop completo"
+  expected_capability: pyautogui_screenshot
+- prompt: "captura visual da pagina web do cliente"
+  expected_capability: playwright_screenshot
+- prompt: "captura tela do programa que ta aberto"
+  expected_capability: pyautogui_screenshot
+- prompt: "print do site para o relatorio"
+  expected_capability: playwright_screenshot
+- prompt: "print do meu computador agora"
+  expected_capability: pyautogui_screenshot
+- prompt: "renderiza pagina web e salva PNG"
+  expected_capability: playwright_screenshot
+- prompt: "captura a janela do aplicativo desktop"
+  expected_capability: pyautogui_screenshot
+
+# Telegram vs github_create_issue: both involve "send/notify/report"
+- prompt: "manda alerta no telegram pro time"
+  expected_capability: telegram_send
+- prompt: "registra esse bug como issue no github"
+  expected_capability: github_create_issue
+- prompt: "notifica o canal do telegram do erro"
+  expected_capability: telegram_send
+- prompt: "abre ticket no github descrevendo o problema"
+  expected_capability: github_create_issue
+- prompt: "envia mensagem urgente pelo telegram"
+  expected_capability: telegram_send
+
+# Postgres vs filesystem read: both involve "read/get data"
+- prompt: "consulta os pedidos no banco postgres"
+  expected_capability: postgres_query
+- prompt: "le o conteudo do arquivo de configuracao"
+  expected_capability: filesystem_read
+- prompt: "executa SELECT * FROM users no banco"
+  expected_capability: postgres_query
+- prompt: "abre o arquivo log.txt e mostra"
+  expected_capability: filesystem_read
+- prompt: "fetch the customer rows from postgres"
+  expected_capability: postgres_query
+
+# Docker compose vs ollama_generate: both involve "start/run a process"
+- prompt: "sobe os servicos do projeto docker compose"
+  expected_capability: docker_compose_up
+- prompt: "roda o llama 3 localmente via ollama"
+  expected_capability: ollama_generate
+- prompt: "start the development environment containers"
+  expected_capability: docker_compose_up
+- prompt: "gera resposta usando modelo de IA local"
+  expected_capability: ollama_generate
+- prompt: "levanta o stack de desenvolvimento"
+  expected_capability: docker_compose_up
+
+# === group B: long compound queries (25) ===
+# Real prompts often have multiple clauses. The retriever should latch onto
+# the dominant action even when the query is verbose.
+
+- prompt: "preciso urgentemente que voce manda mensagem no telegram avisando o cliente que o deploy terminou com sucesso"
+  expected_capability: telegram_send
+- prompt: "antes de mais nada abre uma issue no github com titulo bug critico no fluxo de login"
+  expected_capability: github_create_issue
+- prompt: "por favor consulta os ultimos 100 usuarios cadastrados no banco postgres pra eu analisar"
+  expected_capability: postgres_query
+- prompt: "depois de validar tudo sobe os containers do projeto com docker compose pra eu testar"
+  expected_capability: docker_compose_up
+- prompt: "rapido tira um print da home do site da empresa pra anexar no email"
+  expected_capability: playwright_screenshot
+- prompt: "preciso que voce le o arquivo de log do servidor de producao e me diz o que tem"
+  expected_capability: filesystem_read
+- prompt: "agora vai la no obsidian e busca minhas notas sobre o sistema de memoria"
+  expected_capability: obsidian_search_vault
+- prompt: "tira um print do desktop do meu computador agora pra eu colar num documento"
+  expected_capability: pyautogui_screenshot
+- prompt: "abre a pagina inicial do produto no navegador headless e me retorna o html"
+  expected_capability: playwright_goto
+- prompt: "usa um modelo de ia local pra resumir esse texto longo aqui"
+  expected_capability: ollama_generate
+- prompt: "I need you to send a Telegram message warning the client that deploy succeeded"
+  expected_capability: telegram_send
+- prompt: "please open a GitHub issue titled critical bug in the login flow"
+  expected_capability: github_create_issue
+- prompt: "could you query the last 100 registered users from the postgres database"
+  expected_capability: postgres_query
+- prompt: "after validating everything spin up the project containers with docker compose"
+  expected_capability: docker_compose_up
+- prompt: "quickly take a screenshot of the company homepage to attach to the email"
+  expected_capability: playwright_screenshot
+- prompt: "read the production server log file and tell me what is in there"
+  expected_capability: filesystem_read
+- prompt: "go to obsidian and find my notes about the memory system"
+  expected_capability: obsidian_search_vault
+- prompt: "screenshot my computer desktop right now to paste into a document"
+  expected_capability: pyautogui_screenshot
+- prompt: "open the product homepage in a headless browser and return the html"
+  expected_capability: playwright_goto
+- prompt: "use a local AI model to summarize this long text"
+  expected_capability: ollama_generate
+- prompt: "manda mensagem com status do build no telegram team channel agora"
+  expected_capability: telegram_send
+- prompt: "create a github issue describing the broken authentication flow"
+  expected_capability: github_create_issue
+- prompt: "executa essa query SQL select count from orders no postgres production"
+  expected_capability: postgres_query
+- prompt: "starts docker compose with build flag in the project directory"
+  expected_capability: docker_compose_up
+- prompt: "screenshot da landing page do site corporativo full size"
+  expected_capability: playwright_screenshot
+
+# === group C: no-match probes (50) ===
+# These queries are intentionally outside the registry. A good retriever
+# should return [] or surface low-confidence matches that the threshold
+# filter rejects. expected_capability: null means "no card should win".
+
+- prompt: "compose a haiku about september rain"
+  expected_capability: null
+- prompt: "explica diferenca entre programacao funcional e orientada a objetos"
+  expected_capability: null
+- prompt: "what is the boiling point of mercury at sea level"
+  expected_capability: null
+- prompt: "quem ganhou a copa do mundo de 1998"
+  expected_capability: null
+- prompt: "calcula a derivada de x squared plus three x"
+  expected_capability: null
+- prompt: "translate good morning to japanese"
+  expected_capability: null
+- prompt: "qual a capital da australia"
+  expected_capability: null
+- prompt: "describe the plot of hamlet in one paragraph"
+  expected_capability: null
+- prompt: "soma 47 e 89 dividido por 2"
+  expected_capability: null
+- prompt: "list the planets in the solar system"
+  expected_capability: null
+- prompt: "explica fotossintese para uma crianca de 10 anos"
+  expected_capability: null
+- prompt: "what is the chemical formula of water"
+  expected_capability: null
+- prompt: "conta uma piada sobre fisicos"
+  expected_capability: null
+- prompt: "summarize the theory of relativity"
+  expected_capability: null
+- prompt: "qual a diferenca entre amor e paixao"
+  expected_capability: null
+- prompt: "give me a recipe for chocolate chip cookies"
+  expected_capability: null
+- prompt: "explica o que e blockchain em uma frase"
+  expected_capability: null
+- prompt: "name three famous painters from the renaissance"
+  expected_capability: null
+- prompt: "como se conjuga o verbo subir no preterito"
+  expected_capability: null
+- prompt: "what does serendipity mean"
+  expected_capability: null
+- prompt: "porque o ceu e azul"
+  expected_capability: null
+- prompt: "name the seven wonders of the ancient world"
+  expected_capability: null
+- prompt: "como funciona um motor a combustao"
+  expected_capability: null
+- prompt: "explain the difference between weather and climate"
+  expected_capability: null
+- prompt: "qual o sentido da vida segundo nietzsche"
+  expected_capability: null
+- prompt: "what is the population of tokyo"
+  expected_capability: null
+- prompt: "soma a idade do meu cachorro com a do gato"
+  expected_capability: null
+- prompt: "translate this sentence to french je suis fatigue"
+  expected_capability: null
+- prompt: "qual a temperatura ideal pra cafe expresso"
+  expected_capability: null
+- prompt: "describe the ocean in three adjectives"
+  expected_capability: null
+- prompt: "como aprender uma lingua nova rapido"
+  expected_capability: null
+- prompt: "what year did world war two end"
+  expected_capability: null
+- prompt: "diferenca entre veia e arteria no corpo humano"
+  expected_capability: null
+- prompt: "explain the prisoner dilemma"
+  expected_capability: null
+- prompt: "como tirar mancha de tinta da camisa"
+  expected_capability: null
+- prompt: "what is the meaning of carpe diem"
+  expected_capability: null
+- prompt: "lista cinco filmes do kubrick"
+  expected_capability: null
+- prompt: "compute the factorial of 7"
+  expected_capability: null
+- prompt: "porque os gatos ronronam"
+  expected_capability: null
+- prompt: "what is the difference between a virus and bacteria"
+  expected_capability: null
+- prompt: "como cuidar de uma planta suculenta"
+  expected_capability: null
+- prompt: "explain quantum entanglement to a beginner"
+  expected_capability: null
+- prompt: "qual a diferenca entre prosa e poesia"
+  expected_capability: null
+- prompt: "name the longest river in south america"
+  expected_capability: null
+- prompt: "como fazer pao caseiro sem maquina"
+  expected_capability: null
+- prompt: "explain the concept of opportunity cost"
+  expected_capability: null
+- prompt: "qual o impacto da revolucao industrial"
+  expected_capability: null
+- prompt: "what is the speed of light in a vacuum"
+  expected_capability: null
+- prompt: "como se chama o medo de altura"
+  expected_capability: null
+- prompt: "name a song by the beatles"
+  expected_capability: null
