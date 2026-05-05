@@ -76,6 +76,17 @@ Measured on a 50-task benchmark (real `nomic-embed-text` via Ollama, mixed EN+PT
 
 In plain English: **9 out of 10 times the agent gets the right tool on the first try**, with no fine-tuning, no cloud account, and a generic embedding model running on your laptop. The acceptance gate is reproducible — `MNEME_REAL_OLLAMA=1 pytest tests/test_benchmark_acceptance.py`.
 
+### A/B test on actual agent behavior
+
+The retrieval numbers above measure whether the right card appears at the top of the list. The harder question is whether the *agent* changes behavior when those cards are injected. Run `python tests/benchmark/ab_test.py` to see — same local LLM, 10 representative tasks, with vs without the mneme injection block:
+
+| Variant | expected_hit | wrong_fallback | "I can't" |
+|---------|:------------:|:--------------:|:---------:|
+| control (no mneme) | 5 / 10 | 0 | 0 |
+| mneme injection on | **9 / 10** | 0 | 0 |
+
+**+4 hits, +40 percentage points absolute.** Scenarios where the agent went from "ignored the right tool" to "named it directly": GitHub issue creation, Docker compose up, local Ollama LLM, PyAutoGUI desktop screenshot. Reproducible against any local LLM via Ollama.
+
 !!! note "About these numbers"
     The Phase 1 benchmark uses a 10-card seed registry and 50 queries (every query has a correct answer in the registry). top-3 = top-5 because retrieving 5 of 10 capabilities saturates recall at this scale. The CPU latency (2.6 s) is dominated by Ollama; on GPU it drops to 50–100 ms. Phase 2 will publish results on a 200+ card registry with no-match negatives — see [the roadmap](ROADMAP.md).
 
@@ -195,6 +206,17 @@ Medido em benchmark de 50 tarefas (Ollama `nomic-embed-text` real, queries mista
 | **Margem sobre o baseline publicado** | **+51 pp** |
 
 Em português claro: **9 de cada 10 vezes o agente acerta a ferramenta na primeira tentativa**, sem fine-tune, sem cloud, com modelo de embedding genérico rodando local. Acceptance gate reprodutível — `MNEME_REAL_OLLAMA=1 pytest tests/test_benchmark_acceptance.py`.
+
+### A/B no comportamento real do agente
+
+Os números acima medem se o card certo aparece no topo da lista. Pergunta mais dura: o *agente* muda comportamento quando esses cards são injetados? Rode `python tests/benchmark/ab_test.py` — mesmo LLM local, 10 tarefas representativas, com vs sem o bloco mneme:
+
+| Variante | expected_hit | wrong_fallback | "Não consigo" |
+|----------|:------------:|:--------------:|:-------------:|
+| controle (sem mneme) | 5 / 10 | 0 | 0 |
+| com injeção mneme | **9 / 10** | 0 | 0 |
+
+**+4 acertos, +40 pontos percentuais absolutos.** Cenários onde o agente foi de "ignorou a ferramenta certa" pra "nomeou ela direto": criação de issue no GitHub, docker compose up, LLM local via Ollama, screenshot desktop com PyAutoGUI. Reproduzível com qualquer LLM local via Ollama.
 
 ## Como fica na prática
 
