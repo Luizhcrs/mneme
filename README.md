@@ -1,12 +1,22 @@
-# mneme
+<p align="center">
+  <img src="docs/mnemosine.png" alt="Mnemosyne — mother of the muses, goddess of memory" width="320" />
+</p>
 
-> Capability-recall layer for Claude Code. Your AI never forgets what it can do.
+<h1 align="center">mneme</h1>
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![Status: Phase 1](https://img.shields.io/badge/status-phase%201%20MVP-orange.svg)](docs/superpowers/plans/2026-05-04-mneme-phase1.md)
+<p align="center"><em>Capability-recall layer for Claude Code. Your AI never forgets what it can do.</em></p>
 
-**[Português abaixo](#mneme-pt-br)** &nbsp;|&nbsp; [Architecture](docs/superpowers/specs/2026-05-04-mneme-design.md) &nbsp;|&nbsp; [Implementation Plan](docs/superpowers/plans/2026-05-04-mneme-phase1.md)
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License: MIT" /></a>
+  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python 3.11+" /></a>
+  <a href="docs/superpowers/plans/2026-05-04-mneme-phase1.md"><img src="https://img.shields.io/badge/status-phase%201%20MVP-orange.svg" alt="Status: Phase 1" /></a>
+</p>
+
+<p align="center">
+  <strong><a href="#mneme-pt-br">Português abaixo</a></strong> &nbsp;|&nbsp;
+  <a href="docs/superpowers/specs/2026-05-04-mneme-design.md">Architecture</a> &nbsp;|&nbsp;
+  <a href="docs/superpowers/plans/2026-05-04-mneme-phase1.md">Implementation Plan</a>
+</p>
 
 ---
 
