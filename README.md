@@ -16,7 +16,8 @@
   <strong><a href="#mneme-pt-br">Português abaixo</a></strong> &nbsp;|&nbsp;
   <a href="docs/quickstart.md">Quickstart</a> &nbsp;|&nbsp;
   <a href="docs/architecture.md">Architecture</a> &nbsp;|&nbsp;
-  <a href="docs/capability-card-format.md">Capability cards</a>
+  <a href="docs/capability-card-format.md">Capability cards</a> &nbsp;|&nbsp;
+  <a href="ROADMAP.md">Roadmap</a>
 </p>
 
 ---
