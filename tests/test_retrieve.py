@@ -1,0 +1,93 @@
+"""Tests for two-stage retrieval."""
+from __future__ import annotations
+
+from pathlib import Path
+
+import numpy as np
+import pytest
+from numpy.typing import NDArray
+
+from mneme.embedder import EMBED_DIM
+from mneme.retrieve import Retriever
+from mneme.schema import CapabilityCard
+from mneme.store import SqliteStore
+
+
+class _FakeEmbedder:
+    """Deterministic stand-in: maps text to fixed vectors per substring keyword."""
+
+    def __init__(self, mapping: dict[str, NDArray[np.float32]]) -> None:
+        self._mapping = mapping
+
+    def embed(self, text: str) -> NDArray[np.float32]:
+        for key, vec in self._mapping.items():
+            if key in text:
+                return vec
+        return np.zeros(EMBED_DIM, dtype=np.float32)
+
+
+def _unit(seed: int) -> NDArray[np.float32]:
+    rng = np.random.default_rng(seed)
+    v = rng.standard_normal(EMBED_DIM).astype(np.float32)
+    return v / np.linalg.norm(v)
+
+
+def _make_card(card_id: str, category: str) -> CapabilityCard:
+    return CapabilityCard(
+        id=card_id,
+        name=card_id,
+        category=category,
+        action_verb="x",
+        triggers=["x"],
+        description="x",
+        params_required=[],
+        params_optional=[],
+        example="x",
+        schema_version="1",
+        source="mcp",
+    )
+
+
+@pytest.fixture
+def seeded_store(tmp_mneme_dir: Path) -> SqliteStore:
+    store = SqliteStore(tmp_mneme_dir / "semantic.sqlite")
+    store.upsert_capability(_make_card("playwright", "web_browser"), _unit(1))
+    store.upsert_capability(_make_card("read_file", "filesystem"), _unit(2))
+    store.upsert_capability(_make_card("telegram", "comms"), _unit(3))
+    return store
+
+
+def test_retrieves_top_capabilities_for_matching_query(seeded_store: SqliteStore) -> None:
+    web_vec = _unit(1)
+    embedder = _FakeEmbedder({"web_browser": web_vec, "screenshot": web_vec})
+    retriever = Retriever(
+        seeded_store, embedder, top_categories=3, top_capabilities=2, threshold=0.5
+    )
+    result = retriever.retrieve("screenshot the homepage")
+    ids = [c.id for c, _ in result.capabilities]
+    assert "playwright" in ids
+
+
+def test_returns_empty_below_threshold(seeded_store: SqliteStore) -> None:
+    embedder = _FakeEmbedder({})  # all zeros, dissimilar to everything
+    retriever = Retriever(seeded_store, embedder, threshold=0.65)
+    result = retriever.retrieve("totally unrelated nonsense")
+    assert result.capabilities == []
+
+
+def test_format_injection_places_capabilities_block(seeded_store: SqliteStore) -> None:
+    web_vec = _unit(1)
+    embedder = _FakeEmbedder({"web_browser": web_vec, "screenshot": web_vec})
+    retriever = Retriever(seeded_store, embedder, threshold=0.5)
+    result = retriever.retrieve("screenshot please")
+    rendered = result.render()
+    assert rendered.startswith("<capabilities-available>")
+    assert rendered.endswith("</capabilities-available>")
+    assert "playwright" in rendered
+
+
+def test_render_empty_when_no_results(seeded_store: SqliteStore) -> None:
+    embedder = _FakeEmbedder({})
+    retriever = Retriever(seeded_store, embedder, threshold=0.65)
+    result = retriever.retrieve("nope")
+    assert result.render() == ""
